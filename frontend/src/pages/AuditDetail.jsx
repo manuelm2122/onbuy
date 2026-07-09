@@ -11,6 +11,7 @@ import {
   Download,
   LogOut,
   AlertTriangle,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
-import { StatusBadge } from "@/pages/Panel";
+import { StatusBadge, PaymentBadge } from "@/pages/Panel";
 
 const CATEGORIES = [
   { value: "factura", label: "Factura / Comprobante" },
@@ -202,11 +203,12 @@ export default function AuditDetail() {
 
         <div className="mt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <h1 className="font-heading font-black text-3xl tracking-tight text-[#0F172A]" data-testid="audit-detail-title">
                 {audit.condominium_name}
               </h1>
               <StatusBadge status={audit.status} />
+              <PaymentBadge paymentStatus={audit.payment_status} />
             </div>
             <p className="text-slate-500 text-sm mt-2">
               {[audit.address, audit.district].filter(Boolean).join(", ") || "Sin dirección"} · Período:{" "}
@@ -324,7 +326,7 @@ export default function AuditDetail() {
                 </div>
                 <button
                   onClick={runAnalysis}
-                  disabled={analyzing || docs.length === 0}
+                  disabled={analyzing || docs.length === 0 || audit.payment_status !== "autorizada"}
                   data-testid="run-analysis-btn"
                   className="inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-full text-sm transition-colors shrink-0"
                 >
@@ -332,6 +334,18 @@ export default function AuditDetail() {
                   {analyzing ? "Auditando…" : audit.analysis ? "Volver a auditar" : "Iniciar auditoría IA"}
                 </button>
               </div>
+
+              {audit.payment_status !== "autorizada" && (
+                <div className="px-6 py-4 bg-orange-50 border-b border-orange-100 flex items-start gap-3" data-testid="payment-locked-banner">
+                  <Lock className="text-orange-600 shrink-0 mt-0.5" size={16} />
+                  <p className="text-xs text-orange-800 leading-relaxed">
+                    Esta auditoría está <b>pendiente de autorización</b>. El análisis con IA se
+                    habilitará cuando OnBuySolutions confirme tu pago (S/ 1,100 para condominios de
+                    menos de 50 dptos. · S/ 2,100 de 50 a 150 dptos.). Mientras tanto puedes ir
+                    subiendo tus documentos. Consultas: <b>contacto@onbuysolutions.com</b>
+                  </p>
+                </div>
+              )}
 
               {analyzing && (
                 <div className="px-6 py-3 bg-sky-50 border-b border-sky-100 flex items-center gap-3" data-testid="analyzing-indicator">

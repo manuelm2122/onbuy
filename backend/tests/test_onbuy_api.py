@@ -458,3 +458,142 @@ def test_admin_docgen_empty_fields_ok(sess):
     assert r.content[:4] == b"%PDF"
     text = _pdf_text(r.content)
     assert "__________________" in text
+
+
+# -------- Payment Authorization (Commercial Access Control) --------
+
+@pytest.fixture()
+def regular_user(mongo):
+    """Register a regular (non-admin) test user; cleanup after."""
+    email = f"test_regular_{int(time.time()*1000)}@example.com"
+    s = requests.Session()
+    r = s.post(f"{API}/auth/register", json={
+        "name": "TEST Regular", "email": email, "password": "Passw0rd!", "accepted_terms": True,
+    }, timeout=15)
+    assert r.status_code == 200, r.text
+    yield s, email
+    # Cleanup audits + docs
+    user = mongo.users.find_one({"email": email})
+    if user:
+        uid = str(user["_id"])
+        audit_ids = [str(a["_id"]) for a in mongo.audits.find({"user_id": uid})]
+        for aid in audit_ids:
+            mongo.documents.delete_many({"audit_id": aid})
+        mongo.audits.delete_many({"user_id": uid})
+        mongo.users.delete_one({"_id": user["_id"]})
+
+
+def test_regular_user_audit_created_pending_payment(regular_user):
+    s, _ = regular_user
+    r = s.post(f"{API}/audits", json={"condominium_name": "TEST PendPay", "period": "2025-07"}, timeout=15)
+    assert r.status_code == 200
+    a = r.json()
+    assert a["payment_status"] == "pendiente_pago"
+    assert a.get("authorized_at") in (None, "")
+
+
+def test_admin_audit_created_autorizada(sess):
+    r = sess.post(f"{API}/audits", json={"condominium_name": "TEST AdminAudit", "period": "2025-07"}, timeout=15)
+    assert r.status_code == 200
+    a = r.json()
+    aid = a["id"]
+    try:
+        assert a["payment_status"] == "autorizada"
+        assert a.get("authorized_at")
+    finally:
+        sess.delete(f"{API}/audits/{aid}", timeout=10)
+
+
+def test_analyze_returns_402_when_pending(regular_user):
+    s, _ = regular_user
+    r = s.post(f"{API}/audits", json={"condominium_name": "TEST 402", "period": "2025-08"}, timeout=15)
+    aid = r.json()["id"]
+    # Upload a doc (uploading is allowed even when locked)
+    csv_bytes = b"fecha,monto\n2025-01-01,100\n"
+    r_up = s.post(f"{API}/audits/{aid}/documents",
+                  files={"files": ("t.csv", csv_bytes, "text/csv")},
+                  data={"category": "estado_cuenta"}, timeout=20)
+    assert r_up.status_code == 200
+    # Now analyze -> 402
+    r_an = s.post(f"{API}/audits/{aid}/analyze", timeout=15)
+    assert r_an.status_code == 402
+    detail = r_an.json().get("detail", "")
+    assert "autoriz" in detail.lower() or "pago" in detail.lower()
+
+
+def test_admin_list_audits_shows_owner_info(sess, regular_user):
+    s, email = regular_user
+    r = s.post(f"{API}/audits", json={"condominium_name": "TEST OwnerInfo", "period": "2025-09"}, timeout=15)
+    aid = r.json()["id"]
+    r2 = sess.get(f"{API}/admin/audits", timeout=15)
+    assert r2.status_code == 200
+    data = r2.json()
+    assert isinstance(data, list)
+    match = next((x for x in data if x["id"] == aid), None)
+    assert match is not None
+    assert match["owner_email"] == email
+    assert match["payment_status"] == "pendiente_pago"
+    assert "owner_name" in match and "document_count" in match
+
+
+def test_admin_authorize_then_revoke_flow(sess, regular_user):
+    s, _ = regular_user
+    r = s.post(f"{API}/audits", json={"condominium_name": "TEST AuthFlow", "period": "2025-10"}, timeout=15)
+    aid = r.json()["id"]
+    # upload doc
+    s.post(f"{API}/audits/{aid}/documents",
+           files={"files": ("t.csv", b"fecha,monto\n2025-01-01,100\n", "text/csv")},
+           data={"category": "estado_cuenta"}, timeout=20)
+    # analyze blocked
+    assert s.post(f"{API}/audits/{aid}/analyze", timeout=15).status_code == 402
+    # authorize
+    ra = sess.post(f"{API}/admin/audits/{aid}/authorize", timeout=15)
+    assert ra.status_code == 200
+    assert "autoriz" in ra.json().get("message", "").lower()
+    # Verify GET as owner
+    rd = s.get(f"{API}/audits/{aid}", timeout=10)
+    assert rd.status_code == 200
+    assert rd.json()["payment_status"] == "autorizada"
+    # analyze no longer 402 (may be 200 stream w/ budget error, or something else, but NOT 402)
+    r_an = s.post(f"{API}/audits/{aid}/analyze", timeout=60)
+    assert r_an.status_code != 402
+    # revoke
+    rv = sess.post(f"{API}/admin/audits/{aid}/revoke", timeout=15)
+    assert rv.status_code == 200
+    # analyze blocked again
+    assert s.post(f"{API}/audits/{aid}/analyze", timeout=15).status_code == 402
+
+
+def test_admin_authorize_404_for_missing_audit(sess):
+    # Valid ObjectId format but not existing
+    r = sess.post(f"{API}/admin/audits/507f1f77bcf86cd799439011/authorize", timeout=10)
+    assert r.status_code == 404
+
+
+def test_admin_revoke_404_for_missing_audit(sess):
+    r = sess.post(f"{API}/admin/audits/507f1f77bcf86cd799439011/revoke", timeout=10)
+    assert r.status_code == 404
+
+
+def test_admin_endpoints_require_auth():
+    assert requests.get(f"{API}/admin/audits", timeout=10).status_code == 401
+    assert requests.post(f"{API}/admin/audits/507f1f77bcf86cd799439011/authorize", timeout=10).status_code == 401
+    assert requests.post(f"{API}/admin/audits/507f1f77bcf86cd799439011/revoke", timeout=10).status_code == 401
+
+
+def test_admin_endpoints_forbidden_for_non_admin(regular_user):
+    s, _ = regular_user
+    assert s.get(f"{API}/admin/audits", timeout=10).status_code == 403
+    assert s.post(f"{API}/admin/audits/507f1f77bcf86cd799439011/authorize", timeout=10).status_code == 403
+    assert s.post(f"{API}/admin/audits/507f1f77bcf86cd799439011/revoke", timeout=10).status_code == 403
+
+
+def test_regular_user_can_upload_docs_when_locked(regular_user):
+    s, _ = regular_user
+    r = s.post(f"{API}/audits", json={"condominium_name": "TEST UploadLocked", "period": "2025-11"}, timeout=15)
+    aid = r.json()["id"]
+    assert r.json()["payment_status"] == "pendiente_pago"
+    r_up = s.post(f"{API}/audits/{aid}/documents",
+                  files={"files": ("locked.csv", b"a,b\n1,2\n", "text/csv")},
+                  data={"category": "estado_cuenta"}, timeout=20)
+    assert r_up.status_code == 200  # upload allowed even when locked

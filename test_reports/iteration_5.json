@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 5 — Commercial access control (payment authorization) end-to-end tested. Backend: 48/48 pytest passed (10 new tests for the feature). Frontend: full flow verified via Playwright with real UI (registration→pending audit→locked analysis→admin authorize→revoke).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_onbuy_api.py",
+    "/app/test_reports/pytest/pytest_results_iter5.xml"
+  ],
+  "backend_coverage_added": [
+    "test_regular_user_audit_created_pending_payment — new audit by non-admin has payment_status='pendiente_pago', authorized_at null",
+    "test_admin_audit_created_autorizada — admin-created audit is 'autorizada' with authorized_at populated",
+    "test_analyze_returns_402_when_pending — POST /api/audits/{id}/analyze on locked audit returns 402 with Spanish message",
+    "test_admin_list_audits_shows_owner_info — GET /api/admin/audits returns owner_name/owner_email/document_count/payment_status",
+    "test_admin_authorize_then_revoke_flow — authorize→analyze!=402→revoke→analyze==402",
+    "test_admin_authorize_404_for_missing_audit / test_admin_revoke_404_for_missing_audit",
+    "test_admin_endpoints_require_auth — GET /admin/audits and authorize/revoke → 401 without cookies",
+    "test_admin_endpoints_forbidden_for_non_admin — regular user → 403 on the 3 admin endpoints",
+    "test_regular_user_can_upload_docs_when_locked — POST /audits/{id}/documents allowed while pendiente_pago"
+  ],
+  "frontend_coverage": [
+    "Registration with auth-terms-checkbox + auth-toggle-mode-btn → auto-login → /panel",
+    "new-audit-btn → dialog → audit-create-submit-btn → auto-navigates to /panel/auditoria/{id} showing StatusBadge + payment-badge-pendiente_pago in header",
+    "tab-auditorias shows payment-badge-pendiente_pago in Pago column",
+    "Detail: file-input upload works while locked (docs-list rendered)",
+    "tab-analisis: payment-locked-banner shown, run-analysis-btn disabled=true even with 1 doc uploaded",
+    "Admin login → tab-autorizaciones-admin visible → authorizations-info-banner + pending-authorizations-count text 'N auditoría(s) pendiente(s) de autorización.'",
+    "authorizations-table shows both TEST users with owner_name+owner_email, condominium, período, docs count, estado, Pago pill, action button",
+    "authorize-audit-btn-{id} click → toast success → row updates to 'Autorizada' + button swaps to revoke-audit-btn-{id}",
+    "revoke-audit-btn-{id} click → toast 'Autorización revocada' → button swaps back to authorize"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py analyze_audit correctly checks payment_status BEFORE loading documents (line 466). Message is in Spanish per spec.",
+    "Admin listing /api/admin/audits uses a single $in query on users then in-memory map — fine at current scale; if audits >500 consider pagination (currently to_list(500)).",
+    "Migration on startup (line 857-858) idempotently sets legacy audits to 'autorizada' — good backward-compat.",
+    "AdminAuthorizations.jsx uses inline Pill for payment_status instead of the shared PaymentBadge — minor duplication (both defined) but works; consider consolidating on the exported PaymentBadge for consistency (both render 'Autorizada'/'Pago pendiente').",
+    "AuditDetail run-analysis-btn disabled logic is correct: analyzing || docs.length===0 || payment_status!=='autorizada'."
+  ],
+  "updated_files": ["/app/backend/tests/test_onbuy_api.py"],
+  "success_rate": {"backend": "100% (48/48)", "frontend": "100% (all listed flows)"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! (per /app/memory/test_credentials.md). Regular user registered on the fly with auth-terms-checkbox=true.",
+  "seed_data_creation": "Registered 2 temp test users via UI/API, created 2 pending audits with 1 CSV each; ALL cleaned up post-run (users/audits/documents/contacts with 'test_' prefix removed via mongo). Admin user preserved.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "48 pytests in /app/backend/tests/test_onbuy_api.py cover the full API surface including 10 new payment-authorization tests. Panel URL for audit detail is /panel/auditoria/{id} (not /panel/{id}). Admin's own audits are auto-'autorizada'. Emergent LLM key has 0 budget — any successful analyze call returns stream w/ '[ERROR] Budget exceeded' (NOT a bug)."
+}

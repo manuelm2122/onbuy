@@ -25,6 +25,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
 import { AdminDocGenerator } from "@/components/AdminDocGenerator";
+import { AdminAuthorizations } from "@/components/AdminAuthorizations";
 
 const SAMPLE_CATS = {
   estado_cuenta: "Estado de cuenta",
@@ -45,6 +46,20 @@ export const StatusBadge = ({ status }) => {
   const meta = STATUS_META[status] || STATUS_META.pendiente;
   return (
     <span className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border ${meta.cls}`} data-testid={`status-badge-${status}`}>
+      {meta.label}
+    </span>
+  );
+};
+
+export const PAYMENT_META = {
+  pendiente_pago: { label: "Pago pendiente", cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  autorizada: { label: "Autorizada", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+};
+
+export const PaymentBadge = ({ paymentStatus }) => {
+  const meta = PAYMENT_META[paymentStatus] || PAYMENT_META.pendiente_pago;
+  return (
+    <span className={`inline-flex items-center text-xs font-semibold px-3 py-1 rounded-full border whitespace-nowrap ${meta.cls}`} data-testid={`payment-badge-${paymentStatus}`}>
       {meta.label}
     </span>
   );
@@ -264,6 +279,11 @@ export default function Panel() {
               Archivos de ejemplo
             </TabsTrigger>
             {user?.role === "admin" && (
+              <TabsTrigger value="autorizaciones" data-testid="tab-autorizaciones-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Autorizaciones
+              </TabsTrigger>
+            )}
+            {user?.role === "admin" && (
               <TabsTrigger value="documentos" data-testid="tab-documentos-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
                 Documentos
               </TabsTrigger>
@@ -330,6 +350,7 @@ export default function Panel() {
                       <th className="px-5 py-3.5 font-semibold text-xs tracking-wider uppercase hidden md:table-cell">Período</th>
                       <th className="px-5 py-3.5 font-semibold text-xs tracking-wider uppercase hidden sm:table-cell">Docs</th>
                       <th className="px-5 py-3.5 font-semibold text-xs tracking-wider uppercase">Estado</th>
+                      <th className="px-5 py-3.5 font-semibold text-xs tracking-wider uppercase hidden lg:table-cell">Pago</th>
                       <th className="px-5 py-3.5"></th>
                     </tr>
                   </thead>
@@ -349,6 +370,9 @@ export default function Panel() {
                         <td className="px-5 py-4 text-slate-600 hidden sm:table-cell">{a.document_count}</td>
                         <td className="px-5 py-4">
                           <StatusBadge status={a.status} />
+                        </td>
+                        <td className="px-5 py-4 hidden lg:table-cell">
+                          <PaymentBadge paymentStatus={a.payment_status} />
                         </td>
                         <td className="px-5 py-4 text-right">
                           <button
@@ -415,6 +439,11 @@ export default function Panel() {
             </div>
           </TabsContent>
 
+          {user?.role === "admin" && (
+            <TabsContent value="autorizaciones" className="mt-8">
+              <AdminAuthorizations />
+            </TabsContent>
+          )}
           {user?.role === "admin" && (
             <TabsContent value="documentos" className="mt-8">
               <AdminDocGenerator />

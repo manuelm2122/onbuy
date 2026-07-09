@@ -126,6 +126,8 @@ class Audit(BaseDocument):
     purpose: Optional[str] = None
     notes: Optional[str] = None
     status: str = "pendiente"
+    payment_status: str = "pendiente_pago"
+    authorized_at: Optional[str] = None
     analysis: Optional[str] = None
     analysis_date: Optional[str] = None
     created_at: str
@@ -280,6 +282,7 @@ async def me(user: dict = Depends(get_current_user)):
 
 @api_router.post("/audits", response_model=Audit, response_model_by_alias=False)
 async def create_audit(data: AuditCreate, user: dict = Depends(get_current_user)):
+    is_admin = user.get("role") == "admin"
     audit = Audit(
         user_id=user["_id"],
         condominium_name=data.condominium_name.strip(),
@@ -288,6 +291,8 @@ async def create_audit(data: AuditCreate, user: dict = Depends(get_current_user)
         period=data.period.strip(),
         purpose=data.purpose,
         notes=data.notes,
+        payment_status="autorizada" if is_admin else "pendiente_pago",
+        authorized_at=datetime.now(timezone.utc).isoformat() if is_admin else None,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     result = await db.audits.insert_one(audit.to_mongo())
@@ -458,6 +463,11 @@ async def analyze_audit(audit_id: str, user: dict = Depends(get_current_user)):
     audit = await db.audits.find_one({"_id": ObjectId(audit_id), "user_id": user["_id"]})
     if not audit:
         raise HTTPException(status_code=404, detail="Auditoría no encontrada")
+    if audit.get("payment_status") != "autorizada":
+        raise HTTPException(
+            status_code=402,
+            detail="Esta auditoría está pendiente de autorización. OnBuySolutions habilitará el análisis con IA al confirmar tu pago.",
+        )
     docs = await db.documents.find({"audit_id": audit_id}).to_list(500)
     if not docs:
         raise HTTPException(status_code=400, detail="Sube al menos un documento antes de iniciar la auditoría")
@@ -687,6 +697,67 @@ async def download_report(audit_id: str, user: dict = Depends(get_current_user))
     )
 
 
+# ---------- ADMIN: AUDIT AUTHORIZATIONS ----------
+
+def _require_admin(user: dict):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo el administrador puede realizar esta acción")
+
+
+@api_router.get("/admin/audits")
+async def admin_list_audits(user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    docs = await db.audits.find({}).sort("created_at", -1).to_list(500)
+    user_ids = list({d["user_id"] for d in docs})
+    users = await db.users.find({"_id": {"$in": [ObjectId(u) for u in user_ids]}}).to_list(500)
+    umap = {str(u["_id"]): u for u in users}
+    out = []
+    for d in docs:
+        owner = umap.get(d["user_id"], {})
+        out.append({
+            "id": str(d["_id"]),
+            "condominium_name": d["condominium_name"],
+            "district": d.get("district"),
+            "period": d["period"],
+            "status": d.get("status", "pendiente"),
+            "payment_status": d.get("payment_status", "pendiente_pago"),
+            "authorized_at": d.get("authorized_at"),
+            "created_at": d["created_at"],
+            "document_count": await db.documents.count_documents({"audit_id": str(d["_id"])}),
+            "owner_name": owner.get("name", "—"),
+            "owner_email": owner.get("email", "—"),
+        })
+    return out
+
+
+@api_router.post("/admin/audits/{audit_id}/authorize")
+async def admin_authorize_audit(audit_id: str, user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    result = await db.audits.update_one(
+        {"_id": ObjectId(audit_id)},
+        {"$set": {
+            "payment_status": "autorizada",
+            "authorized_at": datetime.now(timezone.utc).isoformat(),
+            "authorized_by": user["email"],
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Auditoría no encontrada")
+    return {"message": "Auditoría autorizada. El cliente ya puede ejecutar el análisis con IA."}
+
+
+@api_router.post("/admin/audits/{audit_id}/revoke")
+async def admin_revoke_audit(audit_id: str, user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    result = await db.audits.update_one(
+        {"_id": ObjectId(audit_id)},
+        {"$set": {"payment_status": "pendiente_pago"}, "$unset": {"authorized_at": "", "authorized_by": ""}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Auditoría no encontrada")
+    return {"message": "Autorización revocada"}
+
+
 # ---------- ADMIN DOCUMENT GENERATOR ----------
 
 class AdminDocInput(BaseModel):
@@ -782,6 +853,10 @@ async def startup():
         from generate_samples import generate_all
         generate_all(SAMPLES_DIR)
         logger.info("Sample files generated")
+    await db.audits.update_many(
+        {"payment_status": {"$exists": False}},
+        {"$set": {"payment_status": "autorizada"}},
+    )
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@onbuysolutions.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "OnBuy2026!")
     existing = await db.users.find_one({"email": admin_email})
