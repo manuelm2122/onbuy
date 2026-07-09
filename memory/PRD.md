@@ -32,7 +32,8 @@ Sistema de auditorías a condominios en Perú usando la IA de Google más avanza
 - [x] Análisis IA con streaming en vivo (Gemini 3.1 Pro)
 - [x] Reporte PDF profesional descargable
 - [x] Dashboard con estadísticas + formulario de contacto
-- [x] Testing e2e: 14/14 backend, frontend 100% (iteration_1.json)
+- [x] Pestaña "Archivos de ejemplo" en el panel (2026-06): 6 documentos ficticios generados con IA (estado de cuenta PDF, 3 facturas PDF, recibos CSV, presupuesto XLSX) del "Condominio Los Álamos, Enero 2025" con irregularidades plantadas (pago duplicado S/ 950, retiro ATM S/ 3,000 sin sustento, factura S/ 2,200 vs cargo S/ 2,400) para probar el flujo completo. Endpoints /api/samples y /api/samples/{filename}; generador en /app/backend/generate_samples.py (auto-genera en startup si el dir está vacío)
+- [x] Testing e2e: 14/14 backend, frontend 100% (iteration_1.json); 24/24 backend + frontend 100% (iteration_2.json)
 
 ## Estado conocido
 - ⚠️ La Emergent LLM Key tiene saldo 0: el análisis IA devuelve error controlado hasta que el usuario recargue (Perfil → Universal Key → Add Balance). Todo lo demás verificado.
