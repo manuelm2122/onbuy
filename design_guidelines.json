@@ -1,0 +1,111 @@
+{
+  "project_name": "OnBuySolutions",
+  "app_type": "hybrid_fullstack",
+  "theme": {
+    "mode": "light_and_dark",
+    "archetype": "Swiss & High-Contrast",
+    "description": "A mix of Swiss authority with modern fintech depth. It needs to convey ultimate trust, legal validity, and cutting-edge AI processing for condominium audits in Peru."
+  },
+  "typography": {
+    "headings": {
+      "fontFamily": "Outfit",
+      "import_url": "https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800;900&display=swap",
+      "rules": [
+        "MUST use tight letter spacing (tracking-tight) for large sizes.",
+        "Avoid generic bold. Use Black/900 for impact or Light/300 for elegance.",
+        "Never use Inter for headings."
+      ],
+      "sizes": {
+        "h1": "text-4xl sm:text-5xl lg:text-6xl",
+        "h2": "text-2xl sm:text-3xl lg:text-4xl",
+        "h3": "text-xl sm:text-2xl",
+        "h4": "text-lg sm:text-xl"
+      }
+    },
+    "body": {
+      "fontFamily": "IBM Plex Sans",
+      "import_url": "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&display=swap",
+      "rules": [
+        "Loose leading for readable legal/audit text (leading-relaxed)."
+      ],
+      "sizes": {
+        "base": "text-base",
+        "small": "text-sm",
+        "labels": "text-xs tracking-[0.2em] uppercase"
+      }
+    }
+  },
+  "colors": {
+    "light": {
+      "background": "#F8FAFC",
+      "foreground": "#0F172A",
+      "primary": "#0F172A",
+      "primary-foreground": "#FFFFFF",
+      "accent": "#0284C7",
+      "accent-foreground": "#FFFFFF",
+      "border": "#E2E8F0"
+    },
+    "dark": {
+      "background": "#020617",
+      "foreground": "#F8FAFC",
+      "primary": "#FFFFFF",
+      "primary-foreground": "#020617",
+      "accent": "#0EA5E9",
+      "accent-foreground": "#FFFFFF",
+      "border": "#1E293B"
+    },
+    "rules": [
+      "No pure #000000 or #808080. Always tinted.",
+      "High contrast for audit data. Warnings/Irregularities in Signal Red (#DC2626).",
+      "Do not use Teal Green/Blue for dashboards."
+    ]
+  },
+  "layouts": {
+    "spacing": "Generous Spacing: p-6, p-8, p-12. Containers with borders MUST have padding to avoid collision.",
+    "grid_strategy_marketing": "Tetris Grid: Asymmetry, gap-8 to gap-12, col-span-full md:col-span-8 for hero.",
+    "grid_strategy_dashboard": "High Density Grid: Data Correlation. grid-cols-1 md:grid-cols-3 lg:grid-cols-4 with gap-4 or gap-6. Stretch children vertically.",
+    "alignment": "Mobile-first responsive. Optical alignment over geometrical alignment."
+  },
+  "surfaces_and_visual_enhancers": {
+    "marketing_hero": "Hero image max overlay opacity: bg-black/50. If image isn't visible, it's too dark. Use textures like noise/grain.",
+    "headers": "Crystal Glassmorphism for sticky navs: backdrop-blur-xl, saturate-150, 1px delicate inner stroke, soft ambient shadow. NEVER use fully transparent background.",
+    "dashboard_cards": "Grid Borders: Expose the skeleton. border-collapse layout or subtle 1px border. Cardless dense tables preferred.",
+    "motion": "Framer Motion for micro-interactions. Ensure accessible motion rules."
+  },
+  "components_strategy": {
+    "marketing": "Pure HTML/Tailwind for layouts. No Shadcn Card wrappers to avoid rigidity. Raw divs for overlapping.",
+    "dashboard": "Shadcn UI (tables, dropdowns, dialogs). Customize Shadcn default spacing and radii. Recharts for Gemini data visualization.",
+    "forms": "ALWAYS use Shadcn Input, Select, Form, customized to not look like default Vercel.",
+    "toasts": "Use Sonner for toast notifications.",
+    "icons": "Use lucide-react (default) or @phosphor-icons/react for high-end UI."
+  },
+  "image_urls": {
+    "hero_architecture": {
+      "url": "https://images.unsplash.com/photo-1479839672679-a46483c0e7c8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAxODF8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBjb25kb21pbml1bSUyMGFyY2hpdGVjdHVyZXxlbnwwfHx8fDE3ODM2Mjk2ODZ8MA&ixlib=rb-4.1.0&q=85",
+      "description": "white modern cement building under blue sky - use as background for landing page hero section"
+    },
+    "lima_cityscape": {
+      "url": "https://images.unsplash.com/photo-1531968455001-5c5272a41129?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwyfHxsaW1hJTIwcGVydSUyMGNpdHl8ZW58MHx8fHwxNzgzNjI5Njg2fDA&ixlib=rb-4.1.0&q=85",
+      "description": "road near body of water and buildings at daytime - use for 'Nosotros' or context section"
+    },
+    "financial_audit": {
+      "url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwyfHxmaW5hbmNpYWwlMjBkYXRhJTIwYW5hbHlzaXMlMjBzY3JlZW58ZW58MHx8fHwxNzgzNjI5Njg2fDA&ixlib=rb-4.1.0&q=85",
+      "description": "graphs of performance analytics - use for Gemini AI Analysis feature representation"
+    },
+    "professional_audit": {
+      "url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBidXNpbmVzcyUyMGF1ZGl0fGVufDB8fHx8MTc4MzYyOTY4Nnww&ixlib=rb-4.1.0&q=85",
+      "description": "person holding pencil near laptop computer - use for 'Auditoria' / features section"
+    }
+  },
+  "universal_guidelines_for_main_agent": [
+    "Do not converge toward generic outputs or simplistic gradients.",
+    "Do not center align the app container (.App { text-align: center; } is banned).",
+    "Never use universal transition (transition: all). Target specific properties.",
+    "Every interaction needs micro-animations.",
+    "Use 2-3x more spacing than comfortable.",
+    "No AI assistant Emoji characters (🤖🧠💭💡🔮🎯).",
+    "All interactive elements MUST include data-testid attribute.",
+    "Language MUST be Spanish.",
+    "Add GENERAL UI UX DESIGN GUIDELINES."
+  ]
+}
