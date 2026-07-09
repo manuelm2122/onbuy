@@ -1,0 +1,56 @@
+{
+  "summary": "Iteration 7 — Auto-classification (Gemini) sin campo 'category' + parseo de DOCUMENTOS_FALTANTES + banner UX. 59/59 pytests verdes (6 nuevos + 53 regresión). UI verificada en Playwright: banner listando 7 tipos de documentos, dropzone único (upload-dropzone/file-input) sin selector de categoría, missing-docs-warning mostrando ambos items seed, y el marcador 'DOCUMENTOS_FALTANTES' NO se filtra a la UI. Real LLM classify se ejecutó UNA vez con 3 samples y devolvió mappings correctos (estado_cuenta/factura/recibo) dentro de ~30s.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration7_autoclassify.py",
+    "/app/backend/tests/test_onbuy_api.py",
+    "/app/backend/tests/test_iteration6_legal.py",
+    "/app/test_reports/pytest/pytest_results_iter7.xml"
+  ],
+  "backend_coverage_added": [
+    "test_upload_no_category_field_creates_clasificando — POST /api/audits/{id}/documents SIN 'category' devuelve doc con category='clasificando'",
+    "test_upload_multiple_samples_get_classified — sube 3 samples reales, polling GET /documents hasta ~30s, valida clasificación IA: estado_cuenta_enero_2025.pdf→estado_cuenta, factura_jardineria→factura, recibos.csv→recibo",
+    "test_system_prompt_has_documentos_faltantes_instruction — server.py contiene 'INSTRUCCIÓN FINAL OBLIGATORIA' + 'DOCUMENTOS_FALTANTES:' + 'NINGUNO'",
+    "test_analyze_marker_parsing_via_mongo_seed — seed audit con missing_documents en Mongo → GET /api/audits/{id} devuelve missing_documents en JSON y PDF report 200",
+    "test_frontend_source_has_banner_and_dropzone — AuditDetail.jsx contiene required-docs-banner, upload-dropzone, file-input, missing-docs-warning; NO contiene doc-category-select",
+    "test_upload_invalid_extension_rejected — .exe sigue devolviendo 400 tras remover 'category'"
+  ],
+  "frontend_coverage_added": [
+    "Login como admin OK",
+    "Banner (required-docs-banner) muestra los 7 tipos de documentos requeridos + texto de advertencia sobre clasificación automática",
+    "Dropzone único (upload-dropzone/file-input) presente; selector doc-category-select CONFIRMADO ausente",
+    "Tab Reporte final: missing-docs-warning muestra 'Recibos de luz y agua...' + 'Contratos con proveedores...'",
+    "Tab Análisis IA: texto no contiene el string 'DOCUMENTOS_FALTANTES' (regex filter funciona)"
+  ],
+  "real_llm_classify_result": {
+    "executed_once": true,
+    "files": ["estado_cuenta_enero_2025.pdf", "factura_jardineria_E001-0789.pdf", "recibos_mantenimiento_enero_2025.csv"],
+    "final_mapping": {
+      "estado_cuenta_enero_2025.pdf": "estado_cuenta",
+      "factura_jardineria_E001-0789.pdf": "factura",
+      "recibos_mantenimiento_enero_2025.csv": "recibo"
+    },
+    "budget_exceeded": false,
+    "conclusion": "Auto-clasificación IA funcionando correctamente en producción"
+  },
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:342-379 upload_documents ahora usa BackgroundTasks + category='clasificando' — implementación limpia y no bloqueante.",
+    "server.py:476-516 _classify_uploaded_documents maneja fallo de LLM haciendo fallback a category='otro' — comportamiento correcto para no dejar docs eternamente en 'clasificando'.",
+    "server.py:573-578 regex 'DOCUMENTOS_FALTANTES:?\\**:?' es tolerante a variaciones (con/sin negritas, con/sin dos puntos). Se elimina la línea del analysis guardado — verificado en test.",
+    "AuditDetail.jsx:85-90 polling cada 4s vía setTimeout+load — simple y suficiente; no hay riesgo de loop porque solo re-agenda si sigue habiendo docs 'clasificando'.",
+    "AuditDetail.jsx:187 displayContent aplica regex ^\\**DOCUMENTOS_FALTANTES.*$ multiline — defensa en profundidad frente al backend (que ya lo remueve al guardar).",
+    "Sin issues bloqueantes; código listo para producción."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration7_autoclassify.py (nuevo)",
+    "/app/backend/tests/test_onbuy_api.py (removed obsolete data={'category':...} en 5 llamadas de upload; ajustado assert a category='clasificando')"
+  ],
+  "success_rate": {"backend": "100% (59/59)", "frontend": "100% (banner + dropzone + reporte + análisis verificados)"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! (de /app/memory/test_credentials.md)",
+  "seed_data_creation": "Se creó y ELIMINÓ 1 audit seed ObjectId 6a502fecb31d40399161c759 (TEST UI Missing Docs) para prueba UI del missing-docs-warning. Verificado 0 TEST_ audits leftover en Mongo.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "EMERGENT_LLM_KEY tiene budget (classify LLM real ejecutó OK). El endpoint POST /api/audits/{id}/documents YA NO usa 'category'; los tests antiguos con data={'category':...} funcionan porque FastAPI ignora campos extra, pero se actualizaron para dejar de pasarlo. testid doc-category-select ya no existe. Base de 59 pytests verdes."
+}

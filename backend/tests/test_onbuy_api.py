@@ -165,12 +165,13 @@ def test_document_upload_delete(sess):
     try:
         csv_bytes = b"fecha,descripcion,monto\n2025-01-05,Mantenimiento,500.00\n2025-01-10,Limpieza,250.00\n"
         files = {"files": ("test.csv", csv_bytes, "text/csv")}
-        r = sess.post(f"{API}/audits/{aid}/documents", files=files, data={"category": "estado_cuenta"}, timeout=20)
+        r = sess.post(f"{API}/audits/{aid}/documents", files=files, timeout=20)
         assert r.status_code == 200, r.text
         docs = r.json()
         assert len(docs) == 1
         doc_id = docs[0]["id"]
-        assert docs[0]["category"] == "estado_cuenta"
+        # Auto-classify: docs start as 'clasificando'
+        assert docs[0]["category"] == "clasificando"
 
         # list
         r = sess.get(f"{API}/audits/{aid}/documents", timeout=10)
@@ -180,7 +181,7 @@ def test_document_upload_delete(sess):
         # invalid ext
         r = sess.post(f"{API}/audits/{aid}/documents",
                       files={"files": ("bad.exe", b"x", "application/octet-stream")},
-                      data={"category": "otro"}, timeout=10)
+                      timeout=10)
         assert r.status_code == 400
 
         # delete document
@@ -202,7 +203,7 @@ def test_analyze_budget_exceeded_streams_error(sess, mongo):
         csv_bytes = b"fecha,monto\n2025-01-01,100\n"
         sess.post(f"{API}/audits/{aid}/documents",
                   files={"files": ("t.csv", csv_bytes, "text/csv")},
-                  data={"category": "estado_cuenta"}, timeout=20)
+                  timeout=20)
 
         # No documents error
         r_no = sess.post(f"{API}/audits/{aid}/analyze", timeout=60, stream=False)
@@ -512,7 +513,7 @@ def test_analyze_returns_402_when_pending(regular_user):
     csv_bytes = b"fecha,monto\n2025-01-01,100\n"
     r_up = s.post(f"{API}/audits/{aid}/documents",
                   files={"files": ("t.csv", csv_bytes, "text/csv")},
-                  data={"category": "estado_cuenta"}, timeout=20)
+                  timeout=20)
     assert r_up.status_code == 200
     # Now analyze -> 402
     r_an = s.post(f"{API}/audits/{aid}/analyze", timeout=15)
@@ -543,7 +544,7 @@ def test_admin_authorize_then_revoke_flow(sess, regular_user):
     # upload doc
     s.post(f"{API}/audits/{aid}/documents",
            files={"files": ("t.csv", b"fecha,monto\n2025-01-01,100\n", "text/csv")},
-           data={"category": "estado_cuenta"}, timeout=20)
+           timeout=20)
     # analyze blocked
     assert s.post(f"{API}/audits/{aid}/analyze", timeout=15).status_code == 402
     # authorize
@@ -595,5 +596,5 @@ def test_regular_user_can_upload_docs_when_locked(regular_user):
     assert r.json()["payment_status"] == "pendiente_pago"
     r_up = s.post(f"{API}/audits/{aid}/documents",
                   files={"files": ("locked.csv", b"a,b\n1,2\n", "text/csv")},
-                  data={"category": "estado_cuenta"}, timeout=20)
+                  timeout=20)
     assert r_up.status_code == 200  # upload allowed even when locked

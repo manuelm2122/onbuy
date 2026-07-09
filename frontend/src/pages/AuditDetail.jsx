@@ -12,32 +12,39 @@ import {
   LogOut,
   AlertTriangle,
   Lock,
+  ClipboardList,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useAuth } from "@/context/AuthContext";
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
 import { StatusBadge, PaymentBadge } from "@/pages/Panel";
 
-const CATEGORIES = [
-  { value: "factura", label: "Factura / Comprobante" },
-  { value: "estado_cuenta", label: "Estado de cuenta bancario" },
-  { value: "recibo", label: "Recibo de mantenimiento" },
-  { value: "contrato", label: "Contrato de servicios" },
-  { value: "libro_actas", label: "Acta de asamblea" },
-  { value: "presupuesto", label: "Presupuesto / Balance" },
-  { value: "otro", label: "Otro documento" },
-];
+const CATEGORY_LABELS = {
+  factura: "Factura / Comprobante",
+  estado_cuenta: "Estado de cuenta bancario",
+  recibo: "Recibo de mantenimiento",
+  contrato: "Contrato de servicios",
+  libro_actas: "Acta de asamblea",
+  presupuesto: "Presupuesto / Balance",
+  clasificando: "Clasificando con IA…",
+  otro: "Otro documento",
+};
 
-const catLabel = (v) => CATEGORIES.find((c) => c.value === v)?.label || "Otro";
+const catLabel = (v) => CATEGORY_LABELS[v] || "Otro";
+
+const REQUIRED_DOCS = [
+  "Estados de cuenta bancarios de TODOS los meses del período",
+  "Facturas y comprobantes de todos los gastos (limpieza, mantenimiento, etc.)",
+  "Recibos de cuotas de mantenimiento cobradas a los propietarios",
+  "Recibos de servicios públicos de áreas comunes (luz, agua, gas)",
+  "Contratos con proveedores (vigilancia, limpieza, administración)",
+  "Actas de asamblea y acuerdos de gastos",
+  "Presupuesto anual y balances",
+];
 
 const fmtSize = (b) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.ceil(b / 1024)} KB`);
 
@@ -47,7 +54,6 @@ export default function AuditDetail() {
   const navigate = useNavigate();
   const [audit, setAudit] = useState(null);
   const [docs, setDocs] = useState([]);
-  const [category, setCategory] = useState("factura");
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [streamText, setStreamText] = useState("");
@@ -76,15 +82,21 @@ export default function AuditDetail() {
     }
   }, [streamText]);
 
+  useEffect(() => {
+    if (docs.some((d) => d.category === "clasificando")) {
+      const t = setTimeout(load, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [docs, load]);
+
   const uploadFiles = async (fileList) => {
     if (!fileList?.length) return;
     setUploading(true);
     const fd = new FormData();
     for (const f of fileList) fd.append("files", f);
-    fd.append("category", category);
     try {
       await api.post(`/audits/${id}/documents`, fd);
-      toast.success(`${fileList.length} documento(s) subido(s)`);
+      toast.success(`${fileList.length} documento(s) subido(s). La IA los está clasificando automáticamente.`);
       load();
     } catch (err) {
       toast.error(formatApiErrorDetail(err.response?.data?.detail));
@@ -172,6 +184,7 @@ export default function AuditDetail() {
     );
 
   const analysisContent = analyzing ? streamText : audit.analysis || streamText;
+  const displayContent = (analysisContent || "").replace(/^\**DOCUMENTOS_FALTANTES.*$/gm, "").trim();
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -232,34 +245,52 @@ export default function AuditDetail() {
 
           {/* DOCUMENTOS */}
           <TabsContent value="documentos" className="mt-8">
+            <div className="relative overflow-hidden bg-[#0F172A] text-white p-6 lg:p-8 mb-6 grain" data-testid="required-docs-banner">
+              <div className="relative">
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="text-[#0EA5E9]" size={26} strokeWidth={1.5} />
+                  <h3 className="font-heading font-black text-lg tracking-tight">
+                    Documentos necesarios para una auditoría correcta
+                  </h3>
+                </div>
+                <p className="text-sm text-slate-300 mt-3 leading-relaxed max-w-3xl">
+                  <b className="text-white">Sube TODO lo listado a continuación.</b> No necesitas
+                  clasificar nada: nuestra IA identifica y clasifica cada documento automáticamente.
+                  Mientras más completa sea la documentación, más preciso y con mayor valor tendrá tu
+                  informe.
+                </p>
+                <ul className="mt-5 grid sm:grid-cols-2 gap-x-8 gap-y-2.5">
+                  {REQUIRED_DOCS.map((d) => (
+                    <li key={d} className="flex items-start gap-2.5 text-sm text-slate-200">
+                      <CheckCircle2 className="text-[#0EA5E9] shrink-0 mt-0.5" size={16} />
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-5 text-xs text-sky-200/80 leading-relaxed">
+                  Si falta documentación, la IA lo detectará y te lo advertirá al generar el reporte
+                  para que la consigas, la subas y vuelvas a auditar.
+                </p>
+              </div>
+            </div>
+
             <div className="grid lg:grid-cols-3 gap-6">
-              <div className="bg-white border border-slate-200 p-6">
+              <div className="bg-white border border-slate-200 p-6 h-fit">
                 <h3 className="font-heading font-bold text-[#0F172A]">Subir documentos</h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                  PDF, JPG, PNG, WEBP, Excel o CSV. Máximo 20MB por archivo.
+                  Un solo paso: selecciona todos tus archivos a la vez. Aceptamos PDF, JPG, PNG,
+                  WEBP, Excel y CSV (máx. 20MB c/u).
                 </p>
-                <div className="mt-5">
-                  <label className="text-xs tracking-[0.2em] uppercase text-slate-500 font-semibold">Categoría</label>
-                  <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger className="mt-2 w-full" data-testid="doc-category-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value} data-testid={`category-option-${c.value}`}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <label
-                  className="mt-5 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-[#0284C7] p-8 cursor-pointer transition-colors group"
+                  className="mt-5 flex flex-col items-center justify-center border-2 border-dashed border-[#0284C7]/40 bg-sky-50/50 hover:border-[#0284C7] hover:bg-sky-50 p-10 cursor-pointer transition-colors group"
                   data-testid="upload-dropzone"
                 >
-                  <UploadCloud className="text-slate-400 group-hover:text-[#0284C7] transition-colors" size={32} strokeWidth={1.5} />
-                  <span className="text-sm text-slate-500 mt-3 text-center">
-                    {uploading ? "Subiendo…" : "Haz clic para seleccionar archivos"}
+                  <UploadCloud className="text-[#0284C7]" size={38} strokeWidth={1.5} />
+                  <span className="text-sm font-semibold text-[#0F172A] mt-4 text-center">
+                    {uploading ? "Subiendo…" : "Subir todos los documentos"}
+                  </span>
+                  <span className="text-xs text-slate-500 mt-1.5 text-center">
+                    La IA los clasificará automáticamente
                   </span>
                   <input
                     ref={fileRef}
@@ -283,7 +314,7 @@ export default function AuditDetail() {
                   <div className="p-12 text-center" data-testid="empty-docs-message">
                     <FileText className="mx-auto text-slate-300" size={36} strokeWidth={1.2} />
                     <p className="text-slate-500 text-sm mt-4">
-                      Aún no hay documentos. Sube facturas, estados de cuenta y recibos para comenzar.
+                      Aún no hay documentos. Sube todo lo indicado en la lista superior para comenzar.
                     </p>
                   </div>
                 ) : (
@@ -294,18 +325,28 @@ export default function AuditDetail() {
                           <FileText className="text-[#0284C7] shrink-0" size={20} strokeWidth={1.5} />
                           <div className="min-w-0">
                             <p className="text-sm font-medium text-[#0F172A] truncate">{d.filename}</p>
-                            <p className="text-xs text-slate-400">
-                              {catLabel(d.category)} · {fmtSize(d.size)}
-                            </p>
+                            <p className="text-xs text-slate-400">{fmtSize(d.size)}</p>
                           </div>
                         </div>
-                        <button
-                          onClick={() => deleteDoc(d.id)}
-                          data-testid={`delete-doc-btn-${d.id}`}
-                          className="text-slate-400 hover:text-red-600 transition-colors p-1 shrink-0"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center gap-3 shrink-0">
+                          {d.category === "clasificando" ? (
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-200" data-testid={`doc-category-${d.id}`}>
+                              <Loader2 size={11} className="animate-spin" />
+                              {catLabel(d.category)}
+                            </span>
+                          ) : (
+                            <span className="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600" data-testid={`doc-category-${d.id}`}>
+                              {catLabel(d.category)}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => deleteDoc(d.id)}
+                            data-testid={`delete-doc-btn-${d.id}`}
+                            className="text-slate-400 hover:text-red-600 transition-colors p-1"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -357,7 +398,7 @@ export default function AuditDetail() {
               )}
 
               <div ref={streamBoxRef} className="p-6 lg:p-10 max-h-[600px] overflow-y-auto" data-testid="analysis-content">
-                {analysisContent ? (
+                {displayContent ? (
                   <>
                     <div className="mb-6 flex items-start gap-3 bg-slate-50 border border-slate-200 p-4" data-testid="ai-transparency-notice">
                       <AlertTriangle className="text-slate-500 shrink-0 mt-0.5" size={16} />
@@ -371,7 +412,7 @@ export default function AuditDetail() {
                       </p>
                     </div>
                     <div className="markdown-report">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisContent}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
                     </div>
                   </>
                 ) : (
@@ -408,15 +449,38 @@ export default function AuditDetail() {
                   </p>
                 </div>
               ) : (
-                <button
-                  onClick={downloadReport}
-                  disabled={downloading}
-                  data-testid="download-report-btn"
-                  className="mt-8 inline-flex items-center gap-2 bg-[#0F172A] hover:bg-slate-800 disabled:opacity-60 text-white font-semibold px-8 py-4 rounded-full text-sm transition-colors"
-                >
-                  <Download size={16} />
-                  {downloading ? "Generando PDF…" : "Descargar informe PDF"}
-                </button>
+                <>
+                  {audit.missing_documents?.length > 0 && (
+                    <div className="mt-6 flex items-start gap-3 bg-amber-50 border border-amber-300 p-5" data-testid="missing-docs-warning">
+                      <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
+                      <div>
+                        <p className="text-sm font-bold text-amber-900">
+                          La IA detectó documentación faltante para un informe completo:
+                        </p>
+                        <ul className="mt-2 space-y-1.5 text-xs text-amber-800 list-disc ml-4">
+                          {audit.missing_documents.map((d) => (
+                            <li key={d}>{d}</li>
+                          ))}
+                        </ul>
+                        <p className="mt-3 text-xs text-amber-800 leading-relaxed">
+                          <b>Recomendación:</b> consigue estos documentos, súbelos en la pestaña
+                          "Documentos" y vuelve a ejecutar el análisis con IA para generar un informe
+                          nuevo, completo y correcto. Puedes descargar el informe actual, pero
+                          incluirá limitaciones al alcance.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={downloadReport}
+                    disabled={downloading}
+                    data-testid="download-report-btn"
+                    className="mt-8 inline-flex items-center gap-2 bg-[#0F172A] hover:bg-slate-800 disabled:opacity-60 text-white font-semibold px-8 py-4 rounded-full text-sm transition-colors"
+                  >
+                    <Download size={16} />
+                    {downloading ? "Generando PDF…" : "Descargar informe PDF"}
+                  </button>
+                </>
               )}
             </div>
           </TabsContent>

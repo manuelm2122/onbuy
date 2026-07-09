@@ -6,6 +6,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 import os
 import re
+import json
 import uuid
 import logging
 import bcrypt
@@ -14,7 +15,7 @@ from io import BytesIO
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Annotated
 
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import StreamingResponse, FileResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -78,6 +79,7 @@ CATEGORY_LABELS = {
     "contrato": "Contrato de servicios",
     "libro_actas": "Libro de actas / Acta de asamblea",
     "presupuesto": "Presupuesto / Balance",
+    "clasificando": "Pendiente de clasificación",
     "otro": "Otro documento",
 }
 
@@ -130,6 +132,7 @@ class Audit(BaseDocument):
     authorized_at: Optional[str] = None
     analysis: Optional[str] = None
     analysis_date: Optional[str] = None
+    missing_documents: List[str] = Field(default_factory=list)
     created_at: str
     document_count: int = 0
 
@@ -339,15 +342,13 @@ async def delete_audit(audit_id: str, user: dict = Depends(get_current_user)):
 @api_router.post("/audits/{audit_id}/documents", response_model=List[DocumentOut], response_model_by_alias=False)
 async def upload_documents(
     audit_id: str,
+    background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
-    category: str = Form("otro"),
     user: dict = Depends(get_current_user),
 ):
     audit = await db.audits.find_one({"_id": ObjectId(audit_id), "user_id": user["_id"]})
     if not audit:
         raise HTTPException(status_code=404, detail="Auditoría no encontrada")
-    if category not in CATEGORY_LABELS:
-        category = "otro"
     audit_dir = UPLOAD_DIR / audit_id
     audit_dir.mkdir(exist_ok=True)
     saved = []
@@ -367,13 +368,14 @@ async def upload_documents(
             "filename": f.filename,
             "stored_path": str(stored_path),
             "mime_type": EXT_MIME[ext],
-            "category": category,
+            "category": "clasificando",
             "size": len(content),
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
         result = await db.documents.insert_one(meta)
         meta["_id"] = result.inserted_id
         saved.append(DocumentOut.from_mongo(meta))
+    background_tasks.add_task(_classify_uploaded_documents, [d.id for d in saved])
     return saved
 
 
@@ -438,7 +440,12 @@ Operaciones sospechosas, inconsistencias graves o indicios que ameriten investig
 Lista numerada de acciones correctivas concretas para la junta de propietarios / administración.
 
 ## 8. CONCLUSIÓN Y OPINIÓN DEL AUDITOR
-Opinión profesional (limpia, con salvedades, adversa o abstención) debidamente fundamentada."""
+Opinión profesional (limpia, con salvedades, adversa o abstención) debidamente fundamentada.
+
+INSTRUCCIÓN FINAL OBLIGATORIA:
+Después de la sección 8, agrega como ÚLTIMA línea del informe, en texto plano y sin negritas ni formato, exactamente:
+DOCUMENTOS_FALTANTES: documento 1; documento 2; documento 3
+listando de forma breve y concreta los documentos que faltaron para un análisis completo (ej.: "Recibos de luz y agua de áreas comunes del período; Contratos con proveedores; Estados de cuenta de marzo a junio"). Si la documentación estuvo razonablemente completa, escribe exactamente: DOCUMENTOS_FALTANTES: NINGUNO"""
 
 
 async def _prepare_file_contents(docs: List[dict]) -> List[FileContentWithMimeType]:
@@ -461,6 +468,52 @@ async def _prepare_file_contents(docs: List[dict]) -> List[FileContentWithMimeTy
         else:
             contents.append(FileContentWithMimeType(file_path=str(path), mime_type=mime))
     return contents
+
+
+VALID_CATEGORIES = {"factura", "estado_cuenta", "recibo", "contrato", "libro_actas", "presupuesto", "otro"}
+
+
+async def _classify_uploaded_documents(doc_ids: List[str]):
+    obj_ids = [ObjectId(i) for i in doc_ids]
+    try:
+        docs = await db.documents.find({"_id": {"$in": obj_ids}}).to_list(100)
+        if not docs:
+            return
+        file_contents = await _prepare_file_contents(docs)
+        names = "\n".join(f"- {d['filename']}" for d in docs)
+        prompt = (
+            "Clasifica cada uno de los archivos adjuntos en UNA de estas categorías exactas: "
+            "factura, estado_cuenta, recibo, contrato, libro_actas, presupuesto, otro.\n\n"
+            f"Archivos adjuntos:\n{names}\n\n"
+            'Responde ÚNICAMENTE un objeto JSON válido con el formato {"nombre_del_archivo": "categoria"}, '
+            "sin texto adicional ni bloques de código."
+        )
+        chat = LlmChat(
+            api_key=os.environ["EMERGENT_LLM_KEY"],
+            session_id=f"classify-{uuid.uuid4().hex[:8]}",
+            system_message="Eres un clasificador de documentos financieros de condominios en Perú. Respondes únicamente JSON válido.",
+        ).with_model("gemini", "gemini-3.1-pro-preview")
+        chunks = []
+        async for ev in chat.stream_message(UserMessage(text=prompt, file_contents=file_contents)):
+            if isinstance(ev, TextDelta):
+                chunks.append(ev.content)
+            elif isinstance(ev, StreamDone):
+                break
+        raw = "".join(chunks).strip()
+        raw = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw).strip()
+        mapping = json.loads(raw)
+        for d in docs:
+            cat = str(mapping.get(d["filename"], "otro")).strip()
+            if cat not in VALID_CATEGORIES:
+                cat = "otro"
+            await db.documents.update_one({"_id": d["_id"]}, {"$set": {"category": cat}})
+        logger.info(f"Clasificados {len(docs)} documentos automáticamente")
+    except Exception as e:
+        logger.error(f"Error clasificando documentos: {e}")
+        await db.documents.update_many(
+            {"_id": {"$in": obj_ids}, "category": "clasificando"},
+            {"$set": {"category": "otro"}},
+        )
 
 
 @api_router.post("/audits/{audit_id}/analyze")
@@ -516,11 +569,19 @@ Genera el informe completo siguiendo la estructura exacta indicada."""
                 elif isinstance(ev, StreamDone):
                     break
             analysis = "".join(chunks)
+            missing = []
+            found = re.findall(r"\**DOCUMENTOS_FALTANTES:?\**:?\s*(.+)", analysis)
+            if found:
+                val = found[-1].strip().strip("*").strip()
+                analysis = re.sub(r"\n?\**DOCUMENTOS_FALTANTES.*", "", analysis).strip()
+                if val and "NINGUNO" not in val.upper():
+                    missing = [s.strip(" .*") for s in val.split(";") if s.strip(" .*")]
             await db.audits.update_one(
                 {"_id": ObjectId(audit_id)},
                 {"$set": {
                     "analysis": analysis,
                     "status": "completada",
+                    "missing_documents": missing,
                     "analysis_date": datetime.now(timezone.utc).isoformat(),
                 }},
             )

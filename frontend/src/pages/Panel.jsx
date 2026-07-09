@@ -404,7 +404,7 @@ export default function Panel() {
                   auditoría. Incluyen <b>irregularidades intencionales</b> — un pago duplicado, un
                   retiro en efectivo sin sustento y una factura pagada por un monto mayor — que la IA
                   debería detectar. Descárgalos, crea una auditoría (período: Enero 2025), súbelos en
-                  la pestaña "Documentos" con su categoría correspondiente y ejecuta el análisis.
+                  la pestaña "Documentos" todos de una vez (la IA los clasifica automáticamente) y ejecuta el análisis.
                 </p>
               </div>
             </div>
