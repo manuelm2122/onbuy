@@ -6,6 +6,7 @@ import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/AuthPage";
 import Panel from "@/pages/Panel";
 import AuditDetail from "@/pages/AuditDetail";
+import LegalPage from "@/pages/LegalPage";
 
 const Protected = ({ children }) => {
   const { user } = useAuth();
@@ -26,6 +27,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/acceso" element={<AuthPage />} />
+          <Route path="/terminos" element={<LegalPage />} />
+          <Route path="/privacidad" element={<LegalPage />} />
+          <Route path="/uso-ia" element={<LegalPage />} />
           <Route
             path="/panel"
             element={

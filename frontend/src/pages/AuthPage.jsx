@@ -8,18 +8,23 @@ import { formatApiErrorDetail } from "@/lib/api";
 export default function AuthPage() {
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
 
   const submit = async (e) => {
     e.preventDefault();
+    if (mode === "register" && !acceptedTerms) {
+      toast.error("Debes aceptar los Términos y Condiciones y la Política de Privacidad");
+      return;
+    }
     setLoading(true);
     try {
       if (mode === "login") {
         await login(form.email, form.password);
       } else {
-        await register(form.name, form.email, form.password);
+        await register(form.name, form.email, form.password, acceptedTerms);
       }
       toast.success(mode === "login" ? "Bienvenido de nuevo" : "Cuenta creada con éxito");
       navigate("/panel");
@@ -106,6 +111,33 @@ export default function AuthPage() {
                 className="mt-2 w-full bg-white border border-slate-300 focus:border-[#0284C7] outline-none px-4 py-3.5 text-sm text-[#0F172A] transition-colors"
               />
             </div>
+            {mode === "register" && (
+              <label className="flex items-start gap-3 cursor-pointer" data-testid="auth-terms-label">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  data-testid="auth-terms-checkbox"
+                  className="mt-0.5 h-4 w-4 accent-[#0284C7] shrink-0"
+                />
+                <span className="text-xs text-slate-500 leading-relaxed">
+                  Declaro haber leído y acepto los{" "}
+                  <Link to="/terminos" target="_blank" className="text-[#0284C7] font-semibold hover:underline">
+                    Términos y Condiciones
+                  </Link>
+                  , la{" "}
+                  <Link to="/privacidad" target="_blank" className="text-[#0284C7] font-semibold hover:underline">
+                    Política de Privacidad
+                  </Link>{" "}
+                  y el{" "}
+                  <Link to="/uso-ia" target="_blank" className="text-[#0284C7] font-semibold hover:underline">
+                    Aviso de Uso de IA
+                  </Link>
+                  , y otorgo mi consentimiento para el tratamiento de mis datos personales conforme a la Ley
+                  N° 29733.
+                </span>
+              </label>
+            )}
             <button
               type="submit"
               disabled={loading}

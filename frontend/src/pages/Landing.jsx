@@ -383,12 +383,35 @@ export default function Landing() {
 
       {/* FOOTER */}
       <footer className="bg-[#020617] border-t border-slate-800 py-10">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <p className="font-heading font-black text-lg">
-            OnBuy<span className="text-[#0EA5E9]">Solutions</span>
-          </p>
-          <p className="text-xs text-slate-500">
-            © {new Date().getFullYear()} OnBuySolutions — Auditorías de condominios con IA · Perú
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div>
+            <p className="font-heading font-black text-lg">
+              OnBuy<span className="text-[#0EA5E9]">Solutions</span>
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              © {new Date().getFullYear()} OnBuySolutions — Auditorías de condominios con IA · Perú
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
+            <Link to="/terminos" className="hover:text-white transition-colors" data-testid="footer-link-terminos">
+              Términos y Condiciones
+            </Link>
+            <Link to="/privacidad" className="hover:text-white transition-colors" data-testid="footer-link-privacidad">
+              Política de Privacidad
+            </Link>
+            <Link to="/uso-ia" className="hover:text-white transition-colors" data-testid="footer-link-uso-ia">
+              Aviso de Uso de IA
+            </Link>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 mt-6 pt-6 border-t border-slate-900">
+          <p className="text-[11px] text-slate-600 leading-relaxed max-w-4xl">
+            OnBuySolutions es un proveedor de servicios tecnológicos (SaaS) y no una entidad financiera: no
+            capta depósitos del público ni administra fondos de terceros, por lo que no se encuentra bajo
+            supervisión de la SBS ni de la SMV. Los informes son generados mediante algoritmos automatizados
+            de Inteligencia Artificial y requieren la supervisión y validación final del usuario humano,
+            conforme a la Ley N° 31814 y su Reglamento (D.S. N° 115-2025-PCM). Tratamiento de datos conforme a
+            la Ley N° 29733 y D.S. N° 016-2024-JUS.
           </p>
         </div>
       </footer>

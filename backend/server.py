@@ -107,6 +107,7 @@ class RegisterInput(BaseModel):
     name: str = Field(min_length=2)
     email: EmailStr
     password: str = Field(min_length=6)
+    accepted_terms: bool = False
 
 
 class LoginInput(BaseModel):
@@ -226,6 +227,8 @@ async def record_failed_attempt(identifier: str):
 
 @api_router.post("/auth/register")
 async def register(data: RegisterInput, response: Response):
+    if not data.accepted_terms:
+        raise HTTPException(status_code=400, detail="Debes aceptar los Términos y Condiciones y la Política de Privacidad")
     email = data.email.lower().strip()
     if await db.users.find_one({"email": email}):
         raise HTTPException(status_code=400, detail="Este correo ya está registrado")
@@ -235,6 +238,7 @@ async def register(data: RegisterInput, response: Response):
         "password_hash": hash_password(data.password),
         "role": "cliente",
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "accepted_terms_at": datetime.now(timezone.utc).isoformat(),
     }
     result = await db.users.insert_one(doc)
     user_id = str(result.inserted_id)
@@ -648,11 +652,15 @@ def _build_pdf(audit: dict, doc_count: int) -> bytes:
     story.append(HRFlowable(width="100%", thickness=0.5, color=GRAY, spaceAfter=8))
     story.append(Paragraph(
         "Este informe ha sido elaborado por OnBuySolutions mediante un proceso de auditoría asistida por Inteligencia Artificial "
-        "(Google Gemini) sobre la documentación proporcionada por el cliente. El análisis se realizó conforme al marco legal peruano "
+        "(Google Gemini) sobre la documentación proporcionada voluntariamente por el cliente. El análisis se realizó conforme al marco legal peruano "
         "aplicable a condominios y juntas de propietarios (Ley N° 27157 y su Reglamento, D.S. N° 035-2006-VIVIENDA). "
-        "El presente documento puede ser utilizado por el cliente para los fines que estime pertinentes, incluyendo su presentación "
-        "ante juntas de propietarios, administraciones, o como elemento de referencia en procedimientos legales, en cuyo caso se "
-        "recomienda su validación complementaria por un auditor colegiado. Código de verificación: " + str(audit["_id"]) + ".",
+        "AVISO DE TRANSPARENCIA ALGORÍTMICA (Ley N° 31814 y D.S. N° 115-2025-PCM): el presente informe fue generado mediante algoritmos "
+        "automatizados; el usuario humano (la Junta de Propietarios o administración) debe mantener la supervisión final y validar su contenido "
+        "antes de utilizarlo para formular denuncias formales o iniciar procedimientos legales. No constituye una auditoría oficial practicada por "
+        "auditor colegiado ni asesoría legal, contable o financiera. El tratamiento de los datos personales contenidos en la documentación se rige "
+        "por la Ley N° 29733 y su Reglamento (D.S. N° 016-2024-JUS), actuando OnBuySolutions como encargado de tratamiento. "
+        "El presente documento puede ser utilizado por el cliente para los fines que estime pertinentes, recomendándose su validación complementaria "
+        "por un auditor colegiado. Código de verificación: " + str(audit["_id"]) + ".",
         styles["legal"],
     ))
 

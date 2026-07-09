@@ -344,9 +344,22 @@ export default function AuditDetail() {
 
               <div ref={streamBoxRef} className="p-6 lg:p-10 max-h-[600px] overflow-y-auto" data-testid="analysis-content">
                 {analysisContent ? (
-                  <div className="markdown-report">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisContent}</ReactMarkdown>
-                  </div>
+                  <>
+                    <div className="mb-6 flex items-start gap-3 bg-slate-50 border border-slate-200 p-4" data-testid="ai-transparency-notice">
+                      <AlertTriangle className="text-slate-500 shrink-0 mt-0.5" size={16} />
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Informe generado mediante algoritmos automatizados de IA (Ley N° 31814 y D.S. N°
+                        115-2025-PCM). Debes revisar y validar su contenido (supervisión humana) antes de
+                        formular denuncias formales o iniciar acciones legales.{" "}
+                        <Link to="/uso-ia" target="_blank" className="text-[#0284C7] font-semibold hover:underline">
+                          Ver Aviso de Uso de IA
+                        </Link>
+                      </p>
+                    </div>
+                    <div className="markdown-report">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{analysisContent}</ReactMarkdown>
+                    </div>
+                  </>
                 ) : (
                   <div className="text-center py-10">
                     <Sparkles className="mx-auto text-slate-300" size={36} strokeWidth={1.2} />

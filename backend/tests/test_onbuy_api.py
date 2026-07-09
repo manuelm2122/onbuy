@@ -70,14 +70,18 @@ def test_me_unauthenticated():
     assert r.status_code == 401
 
 
-def test_register_and_login_flow():
+def test_register_and_login_flow(mongo):
     email = f"test_user_{int(time.time())}@example.com"
     s = requests.Session()
-    r = s.post(f"{API}/auth/register", json={"name": "TEST User", "email": email, "password": "Passw0rd!"}, timeout=15)
+    r = s.post(f"{API}/auth/register", json={"name": "TEST User", "email": email, "password": "Passw0rd!", "accepted_terms": True}, timeout=15)
     assert r.status_code == 200, r.text
     assert "access_token" in s.cookies
+    # Verify accepted_terms_at persisted
+    user_doc = mongo.users.find_one({"email": email})
+    assert user_doc is not None
+    assert "accepted_terms_at" in user_doc and user_doc["accepted_terms_at"]
     # duplicate
-    r2 = requests.post(f"{API}/auth/register", json={"name": "TEST User", "email": email, "password": "Passw0rd!"}, timeout=10)
+    r2 = requests.post(f"{API}/auth/register", json={"name": "TEST User", "email": email, "password": "Passw0rd!", "accepted_terms": True}, timeout=10)
     assert r2.status_code == 400
     # login
     s2 = requests.Session()
@@ -90,6 +94,20 @@ def test_register_and_login_flow():
     # logout
     r5 = s2.post(f"{API}/auth/logout", timeout=10)
     assert r5.status_code == 200
+    # cleanup
+    mongo.users.delete_one({"email": email})
+
+
+def test_register_requires_accepted_terms():
+    email = f"test_noterms_{int(time.time())}@example.com"
+    # Missing accepted_terms (defaults to False)
+    r = requests.post(f"{API}/auth/register", json={"name": "TEST NoTerms", "email": email, "password": "Passw0rd!"}, timeout=10)
+    assert r.status_code == 400
+    detail = r.json().get("detail", "")
+    assert "Términos" in detail or "términos" in detail.lower()
+    # Explicit accepted_terms=false
+    r2 = requests.post(f"{API}/auth/register", json={"name": "TEST NoTerms", "email": email, "password": "Passw0rd!", "accepted_terms": False}, timeout=10)
+    assert r2.status_code == 400
 
 
 # -------- Audits CRUD --------
@@ -242,6 +260,18 @@ def test_report_pdf_with_manual_analysis(sess, mongo):
         assert r.headers.get("content-type", "").startswith("application/pdf")
         assert r.content[:4] == b"%PDF"
         assert len(r.content) > 1000
+        # Verify new legal disclaimer content (Ley 31814 + supervisión final)
+        try:
+            from pypdf import PdfReader
+        except ImportError:
+            from PyPDF2 import PdfReader
+        reader = PdfReader(io.BytesIO(r.content))
+        text = "".join(p.extract_text() or "" for p in reader.pages)
+        # normalize whitespace
+        norm = " ".join(text.split())
+        assert "31814" in norm, f"Missing Ley 31814 in PDF: {norm[:500]}"
+        assert "supervisi" in norm.lower() and "final" in norm.lower(), f"Missing supervisión final: {norm[:500]}"
+        assert "29733" in norm, f"Missing Ley 29733 in PDF"
     finally:
         sess.delete(f"{API}/audits/{aid}", timeout=10)
 
