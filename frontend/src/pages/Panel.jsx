@@ -9,6 +9,8 @@ import {
   LogOut,
   Trash2,
   ChevronRight,
+  Download,
+  FlaskConical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -21,7 +23,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { api, formatApiErrorDetail } from "@/lib/api";
+import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
+
+const SAMPLE_CATS = {
+  estado_cuenta: "Estado de cuenta",
+  factura: "Factura",
+  recibo: "Recibos",
+  presupuesto: "Presupuesto",
+  otro: "Otro",
+};
 
 export const STATUS_META = {
   pendiente: { label: "Pendiente", cls: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -49,16 +59,47 @@ export default function Panel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
+  const [samples, setSamples] = useState([]);
+  const [downloadingFile, setDownloadingFile] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
-      const [s, a] = await Promise.all([api.get("/dashboard/stats"), api.get("/audits")]);
+      const [s, a, sm] = await Promise.all([
+        api.get("/dashboard/stats"),
+        api.get("/audits"),
+        api.get("/samples"),
+      ]);
       setStats(s.data);
       setAudits(a.data);
+      setSamples(sm.data);
     } catch (err) {
       toast.error("No se pudieron cargar los datos");
     }
   }, []);
+
+  const downloadSample = async (filename) => {
+    setDownloadingFile(filename);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/samples/${encodeURIComponent(filename)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("No se pudo descargar el archivo");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`${filename} descargado`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setDownloadingFile(null);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -218,6 +259,9 @@ export default function Panel() {
             <TabsTrigger value="auditorias" data-testid="tab-auditorias" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
               Auditorías
             </TabsTrigger>
+            <TabsTrigger value="ejemplos" data-testid="tab-ejemplos" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+              Archivos de ejemplo
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="resumen" className="mt-8">
@@ -316,6 +360,53 @@ export default function Panel() {
                 </table>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="ejemplos" className="mt-8">
+            <div className="bg-sky-50 border border-sky-200 p-6 flex items-start gap-4 mb-6" data-testid="samples-info-banner">
+              <FlaskConical className="text-[#0284C7] shrink-0 mt-0.5" size={22} strokeWidth={1.5} />
+              <div>
+                <h3 className="font-heading font-bold text-[#0F172A] text-sm">
+                  Kit de prueba: Condominio Los Álamos (Enero 2025)
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed mt-2">
+                  Documentos ficticios generados con IA para que pruebes el flujo completo de
+                  auditoría. Incluyen <b>irregularidades intencionales</b> — un pago duplicado, un
+                  retiro en efectivo sin sustento y una factura pagada por un monto mayor — que la IA
+                  debería detectar. Descárgalos, crea una auditoría (período: Enero 2025), súbelos en
+                  la pestaña "Documentos" con su categoría correspondiente y ejecuta el análisis.
+                </p>
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200">
+              <ul className="divide-y divide-slate-100" data-testid="samples-list">
+                {samples.map((s) => (
+                  <li key={s.filename} className="px-6 py-4 flex items-center justify-between gap-4" data-testid={`sample-item-${s.filename}`}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="text-[#0284C7] shrink-0" size={20} strokeWidth={1.5} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[#0F172A] truncate">{s.filename}</p>
+                        <p className="text-xs text-slate-400">{s.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
+                        {SAMPLE_CATS[s.category] || "Otro"}
+                      </span>
+                      <button
+                        onClick={() => downloadSample(s.filename)}
+                        disabled={downloadingFile === s.filename}
+                        data-testid={`download-sample-${s.filename}`}
+                        className="inline-flex items-center gap-2 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] disabled:opacity-50 text-slate-600 font-semibold px-4 py-2 rounded-full text-xs transition-colors"
+                      >
+                        <Download size={14} />
+                        {downloadingFile === s.filename ? "Descargando…" : "Descargar"}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </TabsContent>
         </Tabs>
       </main>

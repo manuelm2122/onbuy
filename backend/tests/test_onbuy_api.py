@@ -255,3 +255,59 @@ def test_dashboard_stats(sess):
     for k in ("total_audits", "completed", "pending", "documents"):
         assert k in data
         assert isinstance(data[k], int)
+
+
+
+# -------- Sample files --------
+
+EXPECTED_SAMPLES = {
+    "estado_cuenta_enero_2025.pdf": b"%PDF",
+    "factura_ascensores_E001-0456.pdf": b"%PDF",
+    "factura_jardineria_E001-0789.pdf": b"%PDF",
+    "factura_limpieza_E001-1234.pdf": b"%PDF",
+    "presupuesto_anual_2025.xlsx": b"PK",  # xlsx = zip
+    "recibos_mantenimiento_enero_2025.csv": None,
+}
+
+
+def test_samples_list_requires_auth():
+    r = requests.get(f"{API}/samples", timeout=10)
+    assert r.status_code == 401
+
+
+def test_samples_list(sess):
+    r = sess.get(f"{API}/samples", timeout=10)
+    assert r.status_code == 200
+    data = r.json()
+    assert isinstance(data, list)
+    assert len(data) == 6
+    names = {f["filename"] for f in data}
+    assert names == set(EXPECTED_SAMPLES.keys())
+    for item in data:
+        assert item["size"] > 0
+        assert "category" in item
+        assert "description" in item
+        assert item["description"]  # non-empty
+
+
+@pytest.mark.parametrize("fname,magic", list(EXPECTED_SAMPLES.items()))
+def test_sample_download(sess, fname, magic):
+    r = sess.get(f"{API}/samples/{fname}", timeout=15)
+    assert r.status_code == 200, f"{fname} -> {r.status_code}"
+    assert len(r.content) > 0
+    if magic:
+        assert r.content[:len(magic)] == magic, f"{fname} bad magic"
+
+
+def test_sample_not_found(sess):
+    r = sess.get(f"{API}/samples/nope_does_not_exist.pdf", timeout=10)
+    assert r.status_code == 404
+
+
+def test_sample_path_traversal(sess):
+    # URL-encoded traversal
+    r = sess.get(f"{API}/samples/..%2F..%2Fetc%2Fpasswd", timeout=10)
+    assert r.status_code in (400, 404)
+    # Also plain (may be normalized by client)
+    r2 = sess.get(f"{API}/samples/..%2Fserver.py", timeout=10)
+    assert r2.status_code in (400, 404)

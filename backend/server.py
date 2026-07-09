@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Annotated
 
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
@@ -42,6 +42,17 @@ api_router = APIRouter(prefix="/api")
 
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+SAMPLES_DIR = ROOT_DIR / "sample_files"
+
+SAMPLE_META = {
+    "estado_cuenta_enero_2025.pdf": {"category": "estado_cuenta", "description": "Estado de cuenta bancario del condominio (Enero 2025) con todos los movimientos del mes."},
+    "factura_limpieza_E001-1234.pdf": {"category": "factura", "description": "Factura del servicio de limpieza de áreas comunes por S/ 1,850."},
+    "factura_ascensores_E001-0456.pdf": {"category": "factura", "description": "Factura de mantenimiento de ascensores por S/ 2,200."},
+    "factura_jardineria_E001-0789.pdf": {"category": "factura", "description": "Factura de jardinería y áreas verdes por S/ 950."},
+    "recibos_mantenimiento_enero_2025.csv": {"category": "recibo", "description": "Detalle de cuotas de mantenimiento cobradas a los 30 departamentos."},
+    "presupuesto_anual_2025.xlsx": {"category": "presupuesto", "description": "Presupuesto anual 2025 del condominio (egresos e ingresos)."},
+}
 
 JWT_ALGORITHM = "HS256"
 MAX_FILE_SIZE = 20 * 1024 * 1024
@@ -686,6 +697,34 @@ async def contact(data: ContactInput):
     return {"message": "Mensaje recibido. Te contactaremos pronto."}
 
 
+# ---------- SAMPLE FILES ----------
+
+@api_router.get("/samples")
+async def list_samples(user: dict = Depends(get_current_user)):
+    files = []
+    if SAMPLES_DIR.exists():
+        for f in sorted(SAMPLES_DIR.iterdir()):
+            if f.is_file():
+                meta = SAMPLE_META.get(f.name, {})
+                files.append({
+                    "filename": f.name,
+                    "size": f.stat().st_size,
+                    "category": meta.get("category", "otro"),
+                    "description": meta.get("description", ""),
+                })
+    return files
+
+
+@api_router.get("/samples/{filename}")
+async def download_sample(filename: str, user: dict = Depends(get_current_user)):
+    if "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Nombre inválido")
+    path = SAMPLES_DIR / filename
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(path, filename=filename)
+
+
 @api_router.get("/")
 async def root():
     return {"message": "OnBuySolutions API", "status": "ok"}
@@ -708,6 +747,10 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.audits.create_index("user_id")
     await db.documents.create_index("audit_id")
+    if not SAMPLES_DIR.exists() or not any(SAMPLES_DIR.iterdir()):
+        from generate_samples import generate_all
+        generate_all(SAMPLES_DIR)
+        logger.info("Sample files generated")
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@onbuysolutions.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "OnBuy2026!")
     existing = await db.users.find_one({"email": admin_email})
