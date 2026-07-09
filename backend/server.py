@@ -408,6 +408,11 @@ REGLAS ESTRICTAS:
 - Cada hallazgo debe indicar severidad: [ALTA], [MEDIA] o [BAJA], el documento fuente y el monto involucrado.
 - Si no puedes verificar algo por falta de documentación, indícalo explícitamente como limitación al alcance.
 - NO inventes datos que no estén en los documentos.
+- Si citas el Reglamento de la Ley N° 29733, cita el D.S. N° 016-2024-JUS (vigente desde el 30 de marzo de 2025, que derogó el D.S. N° 003-2013-JUS).
+
+ALERTAS AUTOMÁTICAS OBLIGATORIAS:
+- Si en el cruce documentario NO encuentras recibos de servicios públicos regulados de las áreas comunes (luz, agua, gas) o detectas meses sin pago verificable de dichos servicios, incluye de forma explícita en la sección 5 (HALLAZGOS Y OBSERVACIONES) la siguiente alerta textual: "**ALERTA:** Se identificó un patrón de omisión en el cruce de recibos de servicios públicos regulados, lo que genera riesgo de cortes de agua/luz en el mes siguiente."
+- Siempre que en la sección 7 (RECOMENDACIONES) sugieras configuraciones bancarias (bloqueo de retiros en cajeros ATM, token dual, doble firma mancomunada, cambio de firmantes o similares), añade inmediatamente después la siguiente nota textual: "**Nota:** Esta configuración bancaria requiere que la Junta Directiva cuente con Vigencia de Poder inscrita en Sunarp."
 
 ESTRUCTURA EXACTA DEL INFORME (usa Markdown):
 
@@ -670,7 +675,7 @@ def _build_pdf(audit: dict, doc_count: int) -> bytes:
         "automatizados; el usuario humano (la Junta de Propietarios o administración) debe mantener la supervisión final y validar su contenido "
         "antes de utilizarlo para formular denuncias formales o iniciar procedimientos legales. No constituye una auditoría oficial practicada por "
         "auditor colegiado ni asesoría legal, contable o financiera. El tratamiento de los datos personales contenidos en la documentación se rige "
-        "por la Ley N° 29733 y su Reglamento (D.S. N° 016-2024-JUS), actuando OnBuySolutions como encargado de tratamiento. "
+        "por la Ley N° 29733 y su Reglamento vigente, aprobado por D.S. N° 016-2024-JUS (en vigor desde el 30 de marzo de 2025, norma que derogó el anterior D.S. N° 003-2013-JUS), actuando OnBuySolutions como encargado de tratamiento. "
         "El presente documento puede ser utilizado por el cliente para los fines que estime pertinentes, recomendándose su validación complementaria "
         "por un auditor colegiado. Código de verificación: " + str(audit["_id"]) + ".",
         styles["legal"],

@@ -173,7 +173,7 @@ const Privacidad = () => (
       <UL
         items={[
           "Ley N° 29733 — Ley de Protección de Datos Personales.",
-          "D.S. N° 016-2024-JUS — Reglamento de la Ley N° 29733 (vigente desde el 30 de marzo de 2025).",
+          "D.S. N° 016-2024-JUS — Reglamento vigente de la Ley N° 29733 (en vigor desde el 30 de marzo de 2025; derogó el anterior D.S. N° 003-2013-JUS).",
           "Lineamientos de la Autoridad Nacional de Protección de Datos Personales (ANPD) del Ministerio de Justicia y Derechos Humanos.",
         ]}
       />

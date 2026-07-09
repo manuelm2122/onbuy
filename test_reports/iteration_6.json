@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 6 — Robust legal citation (D.S. 016-2024-JUS + derogated 003-2013-JUS) and mandatory automatic alerts (public-services omission + Sunarp Vigencia de Poder) in AUDIT_SYSTEM_PROMPT. 5/5 new pytests + full regression (53/53) passed. Real LLM analyze executed once as ADMIN with 3 sample files (no light/water receipts, S/3,000 ATM withdrawal in state) — both textual alerts appeared VERBATIM in the generated report.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6_legal.py",
+    "/app/backend/tests/test_onbuy_api.py",
+    "/app/test_reports/pytest/pytest_results_iter6.xml",
+    "/app/test_reports/pytest/pytest_results_iter6_full.xml"
+  ],
+  "backend_coverage_added": [
+    "test_audit_report_pdf_contains_updated_legal_citation — PDF disclaimer includes 016-2024-JUS + 003-2013-JUS + '30 de marzo de 2025' + 'derog*' (pypdf whitespace-normalized)",
+    "test_audit_system_prompt_has_mandatory_alerts_and_regulation_rule — AUDIT_SYSTEM_PROMPT contains 'ALERTAS AUTOMÁTICAS OBLIGATORIAS', 'patrón de omisión', 'servicios públicos regulados', 'cortes de agua/luz', 'Vigencia de Poder', 'Sunarp', and the 016/003 regulation rule",
+    "test_admin_tratamiento_datos_pdf_has_updated_citation — POST /api/admin/documents/generate for tratamiento_datos returns PDF containing both citations",
+    "test_privacy_page_shows_derogated_reglamento — LegalPage.jsx source contains 016-2024-JUS, 003-2013-JUS, 'derogó'; also verified live at GET /privacidad (HTTP 200) and via browser (Marco normativo shows 'D.S. N° 016-2024-JUS — Reglamento vigente... derogó el anterior D.S. N° 003-2013-JUS')",
+    "test_regression_admin_flow_report_pdf_200 — admin create+analysis-seed+report PDF still 200 (regression)"
+  ],
+  "real_llm_analyze_result": {
+    "executed_once": true,
+    "audit_owner": "admin (autorizada)",
+    "files_uploaded": ["estado_cuenta_enero_2025.pdf", "factura_jardineria_E001-0789.pdf", "recibos_mantenimiento_enero_2025.csv"],
+    "stream_status": 200,
+    "stream_length_chars": 9589,
+    "budget_exceeded": false,
+    "alert_public_services_verbatim": "ALERTA:** Se identificó un patrón de omisión en el cruce de recibos de servicios públicos regulados, lo que genera riesgo de cortes de agua/luz en el mes siguiente.",
+    "sunarp_note_verbatim": "Nota:** Esta configuración bancaria requiere que la Junta Directiva cuente con Vigencia de Poder inscrita en Sunarp.",
+    "conclusion": "Both mandated alert texts are emitted verbatim by the LLM under the intended conditions (no light/water receipts + ATM withdrawal triggered bank-config recommendation)."
+  },
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:411-415 AUDIT_SYSTEM_PROMPT correctly adds a dedicated 'ALERTAS AUTOMÁTICAS OBLIGATORIAS' block with exact quoted texts — LLM is following it verbatim (verified).",
+    "server.py:678 report PDF disclaimer robustly mentions current + derogated reglamento with vigency date — legally defensible.",
+    "documents_generator.py:276 tratamiento_datos cláusula PRIMERA updated; other lines (238,305) still use short form '(D.S. N° 016-2024-JUS)' without the derogation mention — acceptable (short refs) but consider standardizing if legal team prefers the full formula everywhere.",
+    "LegalPage.jsx:176 marco normativo bullet correctly cites derogation. Other short refs to 016-2024-JUS remain in other clauses — fine."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration6_legal.py"],
+  "success_rate": {"backend": "100% (53/53)", "frontend": "100% (privacy page verified)"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created and DELETED 4 TEST_ audits during the run (test_audit_report_pdf, test_admin_tratamiento_datos, test_regression_admin_flow, test_alerta_llm real analyze). No residual data.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "EMERGENT_LLM_KEY currently HAS budget (real analyze ran successfully in ~40s). AUDIT_SYSTEM_PROMPT prompt regex must match triple-quoted string: use r'AUDIT_SYSTEM_PROMPT\\s*=\\s*\"\"\"(.+?)\"\"\"' (non-greedy w/ re.DOTALL). All 53 pytests are green — safe baseline for further iterations."
+}
