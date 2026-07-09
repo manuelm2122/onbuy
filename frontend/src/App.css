@@ -1,34 +1,136 @@
-.App-logo {
-    height: 40vmin;
+.font-heading {
+    font-family: 'Outfit', sans-serif;
+}
+
+::selection {
+    background: #0284c7;
+    color: #ffffff;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+.glass-nav {
+    background: rgba(2, 6, 23, 0.72);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
     pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
+.markdown-report h1,
+.markdown-report h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.4rem;
+}
+
+.markdown-report h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: #0284c7;
+    margin-top: 1.25rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.markdown-report p {
+    margin-bottom: 0.75rem;
+    line-height: 1.75;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.markdown-report ul,
+.markdown-report ol {
+    margin: 0.5rem 0 1rem 1.5rem;
+    color: #334155;
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.markdown-report ul {
+    list-style: disc;
+}
+
+.markdown-report ol {
+    list-style: decimal;
+}
+
+.markdown-report li {
+    margin-bottom: 0.35rem;
+}
+
+.markdown-report strong {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.markdown-report table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.8rem;
+}
+
+.markdown-report th {
+    background: #0f172a;
+    color: #ffffff;
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+}
+
+.markdown-report td {
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem 0.75rem;
+    color: #334155;
+}
+
+.markdown-report tr:nth-child(even) td {
+    background: #f8fafc;
+}
+
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.4;
+        transform: scale(0.85);
     }
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-}
-
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.analyzing-dot {
+    animation: pulse-dot 1.2s ease-in-out infinite;
 }

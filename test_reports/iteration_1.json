@@ -1,0 +1,32 @@
+{
+  "summary": "Backend: 14/14 pytest tests passed (auth, audits CRUD, documents upload/delete, analyze streaming with budget-exceeded handled gracefully, PDF report generation with 400 without analysis and 200 with analysis, dashboard stats, contact). Frontend: Landing contact form OK; admin login + session persistence OK; audit creation, CSV upload, doc deletion OK; logout + redirect to /acceso OK. Delete-audit-btn is only rendered in the 'Auditorías' tab (table view) — needs a tab click first; verified via backend that delete works. AI analyze budget-exceeded correctly returns 200 with streamed [ERROR] and sets status='error'.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Landing", "issues": ["Page title in <head> is generic 'Emergent | Fullstack App' instead of an OnBuySolutions branded title"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_onbuy_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Optional) Update index.html <title> to 'OnBuySolutions — Auditorías de Condominios' for SEO/branding.",
+    "(Optional) Consider exposing delete-audit-btn also in the Resumen tab or add a mobile card delete action for consistency.",
+    "User must recharge the Emergent LLM key budget for real Gemini analysis to work end-to-end (system already handles budget-exceeded gracefully)."
+  ],
+  "critical_code_review_comments": [
+    "server.py is 730 lines — consider splitting into routers/modules (auth.py, audits.py, documents.py, analysis.py, report.py) for maintainability.",
+    "Brute-force lockout uses ip:email identifier; behind a proxy request.client.host may be the proxy IP — consider X-Forwarded-For handling.",
+    "set_auth_cookies uses samesite='lax' with secure=True and cross-site cookies work here because same registrable domain; OK for current setup.",
+    "analyze endpoint stores full 'analysis' string in Mongo which can be large — acceptable for MVP.",
+    "No pagination on GET /api/audits (limit 200) — acceptable for MVP but flag for scale."
+  ],
+  "updated_files": ["/app/backend/tests/test_onbuy_api.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Tests create TEST-prefixed audits/docs and clean them up via DELETE. Contact test creates a document in contacts collection (not cleaned; low volume).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test suite at /app/backend/tests/test_onbuy_api.py covers all endpoints. Emergent LLM key budget is 0 — analyze returns 200 with [ERROR] in stream and sets audit status='error'; do NOT treat this as a code bug. PDF report requires audit.analysis populated (test manually sets it in Mongo). Frontend delete-audit-btn requires switching to 'Auditorías' tab first.",
+  "rca of the issue": "N/A — no unresolved issues."
+}
