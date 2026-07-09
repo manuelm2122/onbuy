@@ -33,7 +33,8 @@ Sistema de auditorías a condominios en Perú usando la IA de Google más avanza
 - [x] Reporte PDF profesional descargable
 - [x] Dashboard con estadísticas + formulario de contacto
 - [x] Pestaña "Archivos de ejemplo" en el panel (2026-06): 6 documentos ficticios generados con IA (estado de cuenta PDF, 3 facturas PDF, recibos CSV, presupuesto XLSX) del "Condominio Los Álamos, Enero 2025" con irregularidades plantadas (pago duplicado S/ 950, retiro ATM S/ 3,000 sin sustento, factura S/ 2,200 vs cargo S/ 2,400) para probar el flujo completo. Endpoints /api/samples y /api/samples/{filename}; generador en /app/backend/generate_samples.py (auto-genera en startup si el dir está vacío)
-- [x] Testing e2e: 14/14 backend, frontend 100% (iteration_1.json); 24/24 backend + frontend 100% (iteration_2.json)
+- [x] Cumplimiento legal peruano (2026-06): páginas /terminos, /privacidad y /uso-ia (LegalPage.jsx) basadas en investigación web — Ley 29733 + D.S. 016-2024-JUS (ARCO, ANPD, brechas 48h, flujo transfronterizo, encargado de tratamiento), Ley 31814 + D.S. 115-2025-PCM (riesgo aceptable, transparencia algorítmica, human in the loop), secreto bancario (no scraping, entrega voluntaria), no entidad financiera SBS/SMV. Checkbox de consentimiento obligatorio en registro (backend valida accepted_terms y guarda accepted_terms_at como evidencia demostrable), enlaces en footer, aviso de transparencia en pestaña Análisis IA, disclaimer legal ampliado en el PDF
+- [x] Testing e2e: iteration_1 (14/14), iteration_2 (24/24), iteration_3 (25/25) — todo 100%
 
 ## Estado conocido
 - ⚠️ La Emergent LLM Key tiene saldo 0: el análisis IA devuelve error controlado hasta que el usuario recargue (Perfil → Universal Key → Add Balance). Todo lo demás verificado.
