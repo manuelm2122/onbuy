@@ -341,3 +341,120 @@ def test_sample_path_traversal(sess):
     # Also plain (may be normalized by client)
     r2 = sess.get(f"{API}/samples/..%2Fserver.py", timeout=10)
     assert r2.status_code in (400, 404)
+
+
+
+# -------- Admin Document Generator --------
+
+DOC_TYPES = ["propuesta", "contrato", "confidencialidad", "tratamiento_datos", "autorizacion_bancaria", "recibo"]
+
+BASE_FIELDS = {
+    "empresa_razon_social": "OnBuySolutions S.A.C.",
+    "empresa_ruc": "20601234567",
+    "empresa_representante": "Juan Perez",
+    "empresa_dni": "12345678",
+    "empresa_direccion": "Av. Javier Prado 100, San Isidro",
+    "cliente_nombre": "Junta de Propietarios Cond. Los Pinos",
+    "cliente_ruc": "20509876543",
+    "cliente_representante": "Maria Lopez",
+    "cliente_dni": "87654321",
+    "cliente_cargo": "Presidente de la Junta",
+    "cliente_direccion": "Calle Las Flores 456",
+    "cliente_distrito": "Miraflores",
+    "num_departamentos": "40",
+    "plan": "pequeno",
+    "monto": "1100",
+    "periodo": "Enero - Diciembre 2025",
+    "ciudad": "Lima",
+    "fecha": "15/01/2026",
+    "forma_pago": "Transferencia bancaria",
+    "plazo_entrega": "7 días hábiles",
+    "validez_dias": "15",
+    "vigencia_anios": "5",
+    "recibo_numero": "001-2026",
+    "concepto": "Servicio de auditoría",
+    "fecha_pago": "15/01/2026",
+}
+
+
+def _pdf_text(content: bytes) -> str:
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        from PyPDF2 import PdfReader
+    reader = PdfReader(io.BytesIO(content))
+    return " ".join(" ".join((p.extract_text() or "").split()) for p in reader.pages)
+
+
+@pytest.mark.parametrize("doc_type", DOC_TYPES)
+def test_admin_docgen_all_types(sess, doc_type):
+    r = sess.post(f"{API}/admin/documents/generate",
+                  json={"doc_type": doc_type, "fields": BASE_FIELDS}, timeout=30)
+    assert r.status_code == 200, f"{doc_type}: {r.status_code} {r.text[:200]}"
+    assert r.headers.get("content-type", "").startswith("application/pdf")
+    assert r.content[:4] == b"%PDF"
+    assert len(r.content) > 1000
+    cd = r.headers.get("Content-Disposition", "")
+    assert ".pdf" in cd
+
+
+def test_admin_docgen_contrato_content(sess):
+    r = sess.post(f"{API}/admin/documents/generate",
+                  json={"doc_type": "contrato", "fields": BASE_FIELDS}, timeout=30)
+    assert r.status_code == 200
+    text = _pdf_text(r.content)
+    assert "SUPERVISIÓN HUMANA" in text.upper() or "SUPERVISI" in text.upper()
+    assert "29733" in text
+
+
+def test_admin_docgen_recibo_monto_en_letras(sess):
+    fields = {**BASE_FIELDS, "monto": "1100"}
+    r = sess.post(f"{API}/admin/documents/generate",
+                  json={"doc_type": "recibo", "fields": fields}, timeout=30)
+    assert r.status_code == 200
+    text = _pdf_text(r.content).upper()
+    assert "MIL CIEN CON 00/100 SOLES" in text, f"Missing amount in letters: {text[:400]}"
+
+
+def test_admin_docgen_recibo_mediano_2100(sess):
+    fields = {**BASE_FIELDS, "plan": "mediano", "monto": "2100"}
+    r = sess.post(f"{API}/admin/documents/generate",
+                  json={"doc_type": "recibo", "fields": fields}, timeout=30)
+    assert r.status_code == 200
+    text = _pdf_text(r.content).upper()
+    assert "DOS MIL CIEN CON 00/100 SOLES" in text
+
+
+def test_admin_docgen_invalid_type(sess):
+    r = sess.post(f"{API}/admin/documents/generate",
+                  json={"doc_type": "nope", "fields": {}}, timeout=15)
+    assert r.status_code == 400
+
+
+def test_admin_docgen_requires_auth():
+    r = requests.post(f"{API}/admin/documents/generate",
+                      json={"doc_type": "propuesta", "fields": {}}, timeout=15)
+    assert r.status_code == 401
+
+
+def test_admin_docgen_forbidden_for_non_admin(mongo):
+    email = f"test_docgen_nonadmin_{int(time.time())}@example.com"
+    s = requests.Session()
+    r = s.post(f"{API}/auth/register",
+               json={"name": "TEST NoAdmin", "email": email, "password": "Passw0rd!", "accepted_terms": True}, timeout=15)
+    assert r.status_code == 200
+    try:
+        r2 = s.post(f"{API}/admin/documents/generate",
+                    json={"doc_type": "propuesta", "fields": {}}, timeout=15)
+        assert r2.status_code == 403
+    finally:
+        mongo.users.delete_one({"email": email})
+
+
+def test_admin_docgen_empty_fields_ok(sess):
+    r = sess.post(f"{API}/admin/documents/generate",
+                  json={"doc_type": "propuesta", "fields": {}}, timeout=30)
+    assert r.status_code == 200
+    assert r.content[:4] == b"%PDF"
+    text = _pdf_text(r.content)
+    assert "__________________" in text

@@ -1,0 +1,22 @@
+{
+  "summary": "Iteration 4 — Pricing landing section + Admin Document Generator (6 PDF types). Backend: 38/38 pytest passed (13 new tests added for /api/admin/documents/generate: parametrized 6 doc_types return 200+%PDF, contrato contains 'SUPERVISIÓN'/'29733', recibo S/1100 contains 'MIL CIEN CON 00/100 SOLES', recibo plan=mediano S/2100 contains 'DOS MIL CIEN CON 00/100 SOLES', invalid doc_type→400, no auth→401, non-admin user→403, empty fields→200 with '__________________' placeholders). Frontend: Landing shows #precios with nav-link-precios, pricing-card-pequeno (S/1,100), pricing-card-mediano (S/2,100 + 'Más solicitado' badge), pricing-custom-note, CTAs; admin login → tab-documentos-admin visible → docgen-type-select + all docgen-*-input fields present; changing docgen-plan-select to mediano auto-updates monto to 2100; selecting Recibo shows recibo_numero/fecha_pago/concepto extra fields; docgen-generate-btn downloads Recibo_Pago_*.pdf with success toast; registering a normal user with auth-terms-checkbox works and Documentos tab is NOT visible (only Resumen/Auditorías/Archivos de ejemplo); submitting register without terms stays on /acceso and shows 'Términos' error.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_onbuy_api.py",
+    "/app/test_reports/pytest/pytest_results_iter4.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "documents_generator.py monto_en_letras handles 1100/2100 correctly and F.g() falls back to '__________________' when fields are empty — good UX for print-and-fill.",
+    "Endpoint POST /api/admin/documents/generate correctly enforces role check (403 non-admin) and doc_type whitelist (400).",
+    "AdminDocGenerator.jsx cleanly conditions extra fields per doc_type; setPlan auto-syncs monto to plan price."
+  ],
+  "updated_files": ["/app/backend/tests/test_onbuy_api.py"],
+  "success_rate": {"backend": "100% (38/38)", "frontend": "100% (all listed flows)"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! (see /app/memory/test_credentials.md)",
+  "seed_data_creation": "Temp normal user registered via UI to verify role-based tab hiding; deleted along with test_ prefixed users/contacts after tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "38 backend pytests cover full API surface incl. 13 for /api/admin/documents/generate. Admin has tab-documentos-admin; normal users don't. Panel tabs testids: tab-resumen, tab-auditorias, tab-ejemplos, tab-documentos-admin (admin-only). Auth toggle via [data-testid=\"auth-toggle-mode-btn\"] switches login↔register mode."
+}

@@ -30,6 +30,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle
 
+from documents_generator import build_document, ADMIN_DOC_TYPES
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -682,6 +684,27 @@ async def download_report(audit_id: str, user: dict = Depends(get_current_user))
         BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="Informe_Auditoria_{safe_name}.pdf"'},
+    )
+
+
+# ---------- ADMIN DOCUMENT GENERATOR ----------
+
+class AdminDocInput(BaseModel):
+    doc_type: str
+    fields: dict = Field(default_factory=dict)
+
+
+@api_router.post("/admin/documents/generate")
+async def generate_admin_document(data: AdminDocInput, user: dict = Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo el administrador puede generar documentos")
+    if data.doc_type not in ADMIN_DOC_TYPES:
+        raise HTTPException(status_code=400, detail="Tipo de documento inválido")
+    pdf_bytes, filename = build_document(data.doc_type, data.fields)
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

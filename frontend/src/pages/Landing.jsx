@@ -111,6 +111,7 @@ export default function Landing() {
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-300">
             <a href="#como-funciona" className="hover:text-white transition-colors" data-testid="nav-link-como-funciona">Cómo funciona</a>
             <a href="#servicios" className="hover:text-white transition-colors" data-testid="nav-link-servicios">Servicios</a>
+            <a href="#precios" className="hover:text-white transition-colors" data-testid="nav-link-precios">Precios</a>
             <a href="#contacto" className="hover:text-white transition-colors" data-testid="nav-link-contacto">Contacto</a>
           </div>
           <Link
@@ -296,6 +297,99 @@ export default function Landing() {
               ))}
             </ul>
           </div>
+        </div>
+      </section>
+
+      {/* PRECIOS */}
+      <section id="precios" className="bg-[#020617] py-24 lg:py-32 grain relative">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 relative">
+          <p className="text-xs tracking-[0.3em] uppercase text-[#0EA5E9] font-semibold mb-4">Precios</p>
+          <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white max-w-2xl">
+            Tarifas claras, por año auditado
+          </h2>
+          <p className="text-slate-400 mt-4 max-w-xl text-sm leading-relaxed">
+            Un pago único por cada año de documentación procesada: estados de cuenta bancarios,
+            facturas y recibos de mantenimiento.
+          </p>
+          <div className="mt-14 grid md:grid-cols-2 gap-8 max-w-4xl">
+            {[
+              {
+                name: "Condominio pequeño",
+                target: "Menos de 50 departamentos",
+                price: "1,100",
+                testid: "pricing-card-pequeno",
+                featured: false,
+              },
+              {
+                name: "Condominio mediano a grande",
+                target: "De 50 a 150 departamentos",
+                price: "2,100",
+                testid: "pricing-card-mediano",
+                featured: true,
+              },
+            ].map((p, i) => (
+              <motion.div
+                key={p.name}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i}
+                data-testid={p.testid}
+                className={`relative p-8 lg:p-10 border transition-colors ${
+                  p.featured
+                    ? "border-[#0EA5E9] bg-slate-900/70"
+                    : "border-slate-700 bg-slate-900/40 hover:border-slate-500"
+                }`}
+              >
+                {p.featured && (
+                  <span className="absolute -top-3 left-8 bg-[#0284C7] text-white text-[10px] font-bold tracking-[0.2em] uppercase px-3 py-1 rounded-full">
+                    Más solicitado
+                  </span>
+                )}
+                <h3 className="font-heading font-bold text-lg text-white">{p.name}</h3>
+                <p className="text-xs text-slate-400 mt-1">{p.target}</p>
+                <div className="mt-6 flex items-baseline gap-2">
+                  <span className="font-heading font-black text-5xl text-white">
+                    <span className="text-2xl align-top text-[#0EA5E9]">S/ </span>
+                    {p.price}
+                  </span>
+                  <span className="text-xs text-slate-400">por año auditado</span>
+                </div>
+                <ul className="mt-8 space-y-3">
+                  {[
+                    "Procesamiento de 12 meses de estados bancarios y recibos",
+                    "Análisis completo con IA: duplicados, faltantes e irregularidades",
+                    "Informe PDF profesional con valor legal y código de verificación",
+                    "Hallazgos clasificados por severidad + recomendaciones",
+                  ].map((feat) => (
+                    <li key={feat} className="flex items-start gap-3 text-sm text-slate-300">
+                      <CheckCircle2 className="text-[#0EA5E9] shrink-0 mt-0.5" size={16} />
+                      {feat}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/acceso"
+                  data-testid={`${p.testid}-cta`}
+                  className={`mt-10 inline-flex w-full items-center justify-center gap-2 font-semibold px-6 py-3.5 rounded-full text-sm transition-colors ${
+                    p.featured
+                      ? "bg-[#0284C7] hover:bg-[#0EA5E9] text-white"
+                      : "border border-slate-600 hover:border-slate-300 text-slate-200"
+                  }`}
+                >
+                  Solicitar auditoría <ArrowRight size={16} />
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+          <p className="mt-10 text-sm text-slate-400" data-testid="pricing-custom-note">
+            ¿Más de 150 departamentos o varios años por auditar?{" "}
+            <a href="#contacto" className="text-[#0EA5E9] font-semibold hover:underline">
+              Solicita una cotización personalizada
+            </a>
+            .
+          </p>
         </div>
       </section>
 

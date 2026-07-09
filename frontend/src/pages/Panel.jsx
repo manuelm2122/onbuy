@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
+import { AdminDocGenerator } from "@/components/AdminDocGenerator";
 
 const SAMPLE_CATS = {
   estado_cuenta: "Estado de cuenta",
@@ -262,6 +263,11 @@ export default function Panel() {
             <TabsTrigger value="ejemplos" data-testid="tab-ejemplos" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
               Archivos de ejemplo
             </TabsTrigger>
+            {user?.role === "admin" && (
+              <TabsTrigger value="documentos" data-testid="tab-documentos-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Documentos
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="resumen" className="mt-8">
@@ -408,6 +414,12 @@ export default function Panel() {
               </ul>
             </div>
           </TabsContent>
+
+          {user?.role === "admin" && (
+            <TabsContent value="documentos" className="mt-8">
+              <AdminDocGenerator />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>
