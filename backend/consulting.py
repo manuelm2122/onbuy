@@ -93,6 +93,38 @@ class ExportPdfInput(BaseModel):
 
 DOC_BLOCK_RE = re.compile(r"<<<DOCUMENTO:\s*(.*?)\s*>>>\s*\n?(.*?)<<<FIN_DOCUMENTO>>>", re.DOTALL)
 
+FINAL_REPORT_PROMPT = """Genera el INFORME FINAL DEL EXPEDIENTE para el cierre de este caso, dirigido al cliente. Analiza TODA la conversación y archivos aportados en el expediente.
+
+DATOS PARA EL INFORME:
+- Documentos formales emitidos durante el caso: {emitted}
+- Archivos aportados por el cliente: {uploads}
+
+ESTRUCTURA EXACTA (Markdown, sin marcadores <<<DOCUMENTO>>>):
+
+## 1. DATOS DEL EXPEDIENTE
+Título del caso, materia (civil/penal/contable), período de trabajo, partes involucradas identificadas.
+
+## 2. RESUMEN DE LOS HECHOS
+Narración cronológica y objetiva de los hechos del caso según lo aportado.
+
+## 3. ANÁLISIS LEGAL (CIVIL Y PENAL)
+Normas aplicables citadas con precisión, delitos o infracciones identificados, viabilidad de las acciones.
+
+## 4. ANÁLISIS CONTABLE-FINANCIERO
+Montos involucrados, movimientos analizados, hallazgos contables. Si no hubo análisis contable, indícalo.
+
+## 5. DOCUMENTOS EMITIDOS Y EVIDENCIA APORTADA
+Tabla Markdown: Documento/Archivo | Tipo | Propósito. NO transcribas los documentos completos (se anexan automáticamente al final del PDF).
+
+## 6. ESTADO DEL CASO Y ACCIONES REALIZADAS
+Qué se hizo durante la consultoría y en qué estado queda el caso al cierre.
+
+## 7. RECOMENDACIONES Y PRÓXIMOS PASOS
+Lista numerada de acciones concretas que el cliente debe ejecutar, con plazos sugeridos.
+
+## 8. CONCLUSIÓN DEL CONSULTOR
+Opinión profesional integral de cierre, con la reserva de que la ejecución procesal requiere abogado colegiado."""
+
 
 NAVY = rl_colors.HexColor("#0F172A")
 SKY = rl_colors.HexColor("#0284C7")
@@ -253,6 +285,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "updated_at": c.get("updated_at", c["created_at"]),
             "message_count": msgs,
             "messages_with_files": files,
+            "final_report": c.get("final_report"),
         }
 
     @router.post("")
@@ -463,6 +496,80 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         msg = await db.case_messages.find_one({"_id": result.inserted_id})
         return _serialize_message(msg)
 
+    @router.post("/{case_id}/final-report")
+    async def generate_final_report(case_id: str, user: dict = Depends(get_current_user)):
+        _require_admin(user)
+        case_doc = await _get_case(case_id)
+        msgs = await db.case_messages.find({"case_id": case_id}).sort("created_at", 1).to_list(1000)
+        if not msgs:
+            raise HTTPException(status_code=400, detail="El caso no tiene conversación aún; no hay expediente que informar")
+
+        history = [{"role": "system", "content": CONSULTING_SYSTEM_PROMPT + f"\n\nCASO ACTUAL: {case_doc['title']}. {case_doc.get('description') or ''}"}]
+        for m in msgs:
+            content = m.get("content", "")
+            if m.get("attachments"):
+                names = ", ".join(a["filename"] for a in m["attachments"])
+                content = f"{content}\n[Archivos adjuntados en este mensaje: {names}]".strip()
+            if content:
+                history.append({"role": m["role"], "content": content})
+
+        emitted = []
+        for m in msgs:
+            if m["role"] == "assistant":
+                emitted.extend(DOC_BLOCK_RE.findall(m.get("content", "")))
+        uploads = [a["filename"] for m in msgs for a in m.get("attachments", []) if a.get("kind") == "upload"]
+
+        prompt = FINAL_REPORT_PROMPT.format(
+            emitted="; ".join(t.strip() for t, _ in emitted) or "Ninguno",
+            uploads="; ".join(uploads) or "Ninguno",
+        )
+
+        cfg = await get_app_settings()
+        chat = LlmChat(
+            api_key=cfg["llm_key"],
+            session_id=f"final-{case_id}-{uuid.uuid4().hex[:8]}",
+            system_message=CONSULTING_SYSTEM_PROMPT,
+            initial_messages=history,
+        ).with_model("gemini", cfg["ai_model"])
+
+        chunks = []
+        try:
+            async for ev in chat.stream_message(UserMessage(text=prompt)):
+                if isinstance(ev, TextDelta):
+                    chunks.append(ev.content)
+                elif isinstance(ev, StreamDone):
+                    break
+        except Exception as e:
+            logger.error(f"Error generando informe final: {e}")
+            raise HTTPException(status_code=502, detail=f"No se pudo generar el informe final: {str(e)}")
+
+        report_md = "".join(chunks).strip()
+        report_md = DOC_BLOCK_RE.sub(lambda mt: f"### {mt.group(1).strip()}\n\n{mt.group(2).strip()}", report_md)
+        if emitted:
+            report_md += "\n\n## ANEXOS — DOCUMENTOS EMITIDOS EN EL EXPEDIENTE\n"
+            for i, (t, b) in enumerate(emitted, 1):
+                report_md += f"\n### Anexo {i}: {t.strip()}\n\n{b.strip()}\n"
+
+        pdf_bytes = _consulting_pdf(f"Informe Final del Expediente — {case_doc['title']}", report_md, case_id)
+        case_dir = cases_dir / case_id
+        case_dir.mkdir(exist_ok=True)
+        stored_name = f"informe_final_{uuid.uuid4().hex[:8]}.pdf"
+        (case_dir / stored_name).write_bytes(pdf_bytes)
+
+        import unicodedata
+        ascii_title = unicodedata.normalize("NFKD", case_doc["title"]).encode("ascii", "ignore").decode("ascii")
+        safe_title = re.sub(r"[^\w\-]", "_", ascii_title)[:50]
+        final_report = {
+            "stored_name": stored_name,
+            "filename": f"Informe_Final_{safe_title}.pdf",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.cases.update_one(
+            {"_id": ObjectId(case_id)},
+            {"$set": {"final_report": final_report, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        )
+        return final_report
+
     @router.get("/{case_id}/files/{stored_name}")
     async def download_case_file(case_id: str, stored_name: str, user: dict = Depends(get_current_user)):
         _require_admin(user)
@@ -477,6 +584,11 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             for a in meta.get("attachments", []):
                 if a["stored_name"] == stored_name:
                     filename = a["filename"]
+        else:
+            case_doc = await db.cases.find_one({"_id": ObjectId(case_id)})
+            fr = (case_doc or {}).get("final_report") or {}
+            if fr.get("stored_name") == stored_name:
+                filename = fr.get("filename", stored_name)
         return FileResponse(path, filename=filename)
 
     @router.get("/{case_id}/documents")

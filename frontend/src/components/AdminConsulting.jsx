@@ -13,6 +13,7 @@ import {
   ImagePlus,
   Loader2,
   FolderOpen,
+  FileBadge,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -135,6 +136,7 @@ export const AdminConsulting = () => {
   const [libDialog, setLibDialog] = useState(false);
   const [libraryDocs, setLibraryDocs] = useState(null);
   const [libExporting, setLibExporting] = useState(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const [caseForm, setCaseForm] = useState({ title: "", description: "" });
   const [imgPrompt, setImgPrompt] = useState("");
   const [generatingImg, setGeneratingImg] = useState(false);
@@ -204,12 +206,65 @@ export const AdminConsulting = () => {
     }
   };
 
+  const downloadCaseFile = async (storedName, fallbackName) => {
+    const res = await fetch(`${BACKEND_URL}/api/admin/cases/${selected.id}/files/${storedName}`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("No se pudo descargar el archivo");
+    const cd = res.headers.get("Content-Disposition") || "";
+    const match = cd.match(/filename="(.+)"/);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = match ? match[1] : fallbackName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const generateFinalReport = async (caseData) => {
+    setGeneratingReport(true);
+    toast.info("Generando informe final del expediente… esto puede tardar un momento.");
+    try {
+      const { data } = await api.post(`/admin/cases/${caseData.id}/final-report`);
+      await openCase(caseData.id);
+      loadCases();
+      await downloadCaseFile(data.stored_name, data.filename);
+      toast.success("Informe final generado y descargado");
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const handleFinalReportClick = async () => {
+    if (generatingReport) return;
+    if (selected.final_report) {
+      if (window.confirm("Ya existe un informe final generado. Aceptar = descargar el existente. Cancelar = no hacer nada. (Para regenerarlo, cambia el estado del caso a Cerrado.)")) {
+        try {
+          await downloadCaseFile(selected.final_report.stored_name, selected.final_report.filename);
+          toast.success("Informe final descargado");
+        } catch (err) {
+          toast.error(err.message);
+        }
+      }
+      return;
+    }
+    generateFinalReport(selected);
+  };
+
   const setStatus = async (status) => {
     try {
       const { data } = await api.put(`/admin/cases/${selected.id}`, { status });
       setSelected(data);
       loadCases();
       toast.success(`Caso marcado como ${STATUS_META[status].label.toLowerCase()}`);
+      if (status === "cerrado") {
+        generateFinalReport(data);
+      }
     } catch (err) {
       toast.error(formatApiErrorDetail(err.response?.data?.detail));
     }
@@ -478,6 +533,20 @@ export const AdminConsulting = () => {
                 title="Editar caso"
               >
                 <Pencil size={15} />
+              </button>
+              <button
+                onClick={handleFinalReportClick}
+                disabled={generatingReport}
+                data-testid="final-report-btn"
+                title={selected.final_report ? "Descargar informe final del expediente" : "Generar informe final del expediente"}
+                className={`inline-flex items-center gap-1.5 font-semibold px-3 py-1.5 rounded-full text-xs transition-colors ${
+                  selected.final_report
+                    ? "bg-[#0F172A] hover:bg-slate-800 text-white"
+                    : "border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] text-slate-500"
+                } disabled:opacity-50`}
+              >
+                {generatingReport ? <Loader2 className="animate-spin" size={13} /> : <FileBadge size={13} />}
+                {generatingReport ? "Generando…" : "Informe final"}
               </button>
               <button
                 onClick={openLibrary}

@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 9 — validated the new Consultoría module end-to-end. Backend: 15/15 pytest tests pass (CRUD, admin-only 403 for cliente, multi-turn chat with persistent memory across turns, PDF attachment analysis + download, .exe rejection with 400, document generation with <<<DOCUMENTO>>> markers, library listing, export-pdf only_document with doc_index and 404/400 edges, Nano Banana image generation with generated attachment, final-report empty-case 400, final-report PDF with anexos, download). Frontend: verified Consultoría tab hidden for cliente / visible for admin, create case, all header buttons present (status-select, edit, final-report, library, generate-image), library dialog opens, edit flow persists title change. Light regression: admin tabs Clientes/Configuración/Auditorías all render (testids are tab-clientes-admin, tab-configuracion-admin — noted below). Preserved user data 'Caso demo - Biblioteca' and 'Caso Casas Del Valle' intact; deleted all TEST_ cases via teardown + curl.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_consulting.py",
+    "/app/test_reports/pytest/iter9_consulting.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "consulting.py is well-structured but 646 lines; still under the 700-line guideline. If more features are added (audio transcription, additional export formats), consider splitting into consulting/router.py + consulting/pdf.py + consulting/prompts.py.",
+    "In case_chat generate(), if the client disconnects mid-stream the assistant message is NOT persisted (documented as expected). Consider awaiting a final save even on CancelledError so partial answers are preserved — currently exceptions during streaming yield an inline [ERROR] but nothing is stored (any chunks already sent are lost).",
+    "generate_final_report loads all messages into memory and re-sends them as initial_messages plus a large prompt; for very long cases this may blow the model's context window. Consider truncating or summarising older turns.",
+    "list_case_documents uses DOC_BLOCK_RE.findall which returns tuples; loop uses (title, body) correctly, but preview strips markdown chars naively (may remove legitimate hyphens in dates like 12-03-2025). Cosmetic only.",
+    "In _prepare_attachment_contents, pandas.read_excel is imported lazily but the whole file is loaded synchronously in a request thread; large XLSX would block the event loop. Consider running in a thread executor."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_consulting.py"
+  ],
+  "success_rate": { "backend": "100% (15/15)", "frontend": "100% of UI flows verified" },
+  "test_credentials": "Admin: admin@onbuysolutions.com / OnBuy2026! (unchanged); Cliente: cliente@test.com / Cliente123!",
+  "seed_data_creation": "Only transient TEST_ cases created and cleaned up. User's preserved cases ('Caso demo - Biblioteca', 'Caso Casas Del Valle') NOT touched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Panel.jsx tab testids use -admin suffix for admin-only tabs: tab-clientes-admin, tab-configuracion-admin, tab-consultoria-admin, tab-autorizaciones-admin, tab-documentos-admin. General tabs: tab-resumen, tab-auditorias, tab-ejemplos. To run backend suite export REACT_APP_BACKEND_URL first (pytest does NOT auto-load /app/frontend/.env). Command: `export REACT_APP_BACKEND_URL=https://condominio-audit.preview.emergentagent.com && pytest backend/tests/test_consulting.py -n 0`. Full suite (~63s, spends ~5 LLM calls). LLM budget consumed today: ~5 chat, 1 final-report, 1 image generation — remaining budget may be tight.",
+  "rca of the issue": "N/A — no bugs found."
+}
