@@ -65,6 +65,11 @@ const AttachmentChip = ({ att, caseId }) => {
   );
 };
 
+const cleanContent = (text) =>
+  (text || "")
+    .replace(/<<<DOCUMENTO:\s*(.*?)>>>/g, "\n---\n### $1\n")
+    .replace(/<<<FIN_DOCUMENTO>>>/g, "\n---\n");
+
 const Message = ({ m, caseId, onExport, exporting }) => {
   const isUser = m.role === "user";
   return (
@@ -80,22 +85,35 @@ const Message = ({ m, caseId, onExport, exporting }) => {
           <p className="whitespace-pre-wrap">{m.content}</p>
         ) : (
           <div className="markdown-report text-sm">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanContent(m.content)}</ReactMarkdown>
           </div>
         )}
         {(m.attachments || []).map((a) => (
           <AttachmentChip key={a.stored_name} att={a} caseId={caseId} />
         ))}
         {!isUser && m.id && m.content && (
-          <button
-            onClick={() => onExport(m.id)}
-            disabled={exporting === m.id}
-            data-testid={`export-pdf-btn-${m.id}`}
-            className="mt-3 inline-flex items-center gap-1.5 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] disabled:opacity-50 text-slate-500 font-semibold px-3 py-1.5 rounded-full text-[11px] transition-colors"
-          >
-            <Download size={11} />
-            {exporting === m.id ? "Exportando…" : "Exportar PDF"}
-          </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {m.has_document && (
+              <button
+                onClick={() => onExport(m.id, true)}
+                disabled={exporting === m.id}
+                data-testid={`export-document-btn-${m.id}`}
+                className="inline-flex items-center gap-1.5 bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-50 text-white font-semibold px-3.5 py-1.5 rounded-full text-[11px] transition-colors"
+              >
+                <FileText size={11} />
+                {exporting === m.id ? "Exportando…" : "Descargar documento (PDF)"}
+              </button>
+            )}
+            <button
+              onClick={() => onExport(m.id, false)}
+              disabled={exporting === m.id}
+              data-testid={`export-pdf-btn-${m.id}`}
+              className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] disabled:opacity-50 text-slate-500 font-semibold px-3 py-1.5 rounded-full text-[11px] transition-colors"
+            >
+              <Download size={11} />
+              {m.has_document ? "Respuesta completa" : "Exportar PDF"}
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -271,26 +289,32 @@ export const AdminConsulting = () => {
     }
   };
 
-  const exportPdf = async (messageId) => {
+  const exportPdf = async (messageId, onlyDocument = false) => {
     setExporting(messageId);
     try {
       const res = await fetch(`${BACKEND_URL}/api/admin/cases/${selected.id}/export-pdf`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message_id: messageId }),
+        body: JSON.stringify({ message_id: messageId, only_document: onlyDocument }),
       });
-      if (!res.ok) throw new Error("No se pudo generar el PDF");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(formatApiErrorDetail(err.detail) || "No se pudo generar el PDF");
+      }
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = cd.match(/filename="(.+)"/);
+      const filename = match ? match[1] : `Consultoria_${selected.title.replace(/[^\w-]/g, "_").slice(0, 40)}.pdf`;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Consultoria_${selected.title.replace(/[^\w-]/g, "_").slice(0, 40)}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success("PDF descargado");
+      toast.success(onlyDocument ? "Documento limpio descargado en PDF" : "PDF descargado");
     } catch (err) {
       toast.error(err.message);
     } finally {

@@ -60,7 +60,11 @@ REGLAS:
 - Organiza la información del caso: cuando recibas nuevos datos o archivos, intégralos con lo ya conocido y señala inconsistencias o vacíos.
 - Si falta información clave para aconsejar bien, pídela explícitamente al final de tu respuesta.
 - Tienes acceso a búsqueda de Google: úsala cuando necesites normativa vigente, jurisprudencia, tasas, plazos o datos actuales. Cita la fuente y la norma exacta.
-- Cuando el usuario pida un documento (carta notarial, denuncia, contrato, informe pericial, requerimiento, acta), redáctalo COMPLETO y listo para usar, con estructura formal peruana y campos entre corchetes [ ] para datos faltantes. El documento se exportará a PDF tal cual lo escribas.
+- Cuando el usuario pida un documento (carta notarial, denuncia, contrato, informe pericial, requerimiento, acta), redáctalo COMPLETO y listo para usar, con estructura formal peruana y campos entre corchetes [ ] para datos faltantes. OBLIGATORIO: delimita cada documento formal exactamente así, con los marcadores en líneas propias:
+<<<DOCUMENTO: Título del documento>>>
+(contenido completo del documento en Markdown)
+<<<FIN_DOCUMENTO>>>
+Dentro de los marcadores escribe SOLO el texto final del documento, sin comentarios ni explicaciones; esos van fuera de los marcadores. Esto permite exportar a PDF únicamente el documento limpio.
 - Analiza a fondo cualquier archivo adjunto: extrae montos, fechas, nombres, cláusulas e irregularidades relevantes para el caso.
 - Responde en Markdown (títulos ##, listas, tablas, negritas).
 - En temas de alto riesgo legal, recuerda que tu consultoría no reemplaza el patrocinio de un abogado colegiado ni la firma de un contador público, e indícalo brevemente cuando corresponda."""
@@ -83,6 +87,10 @@ class ImageGenInput(BaseModel):
 
 class ExportPdfInput(BaseModel):
     message_id: str
+    only_document: bool = False
+
+
+DOC_BLOCK_RE = re.compile(r"<<<DOCUMENTO:\s*(.*?)\s*>>>\s*\n?(.*?)<<<FIN_DOCUMENTO>>>", re.DOTALL)
 
 
 NAVY = rl_colors.HexColor("#0F172A")
@@ -223,6 +231,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "case_id": m["case_id"],
             "role": m["role"],
             "content": m.get("content", ""),
+            "has_document": bool(DOC_BLOCK_RE.search(m.get("content", ""))),
             "attachments": [
                 {k: a.get(k) for k in ("filename", "stored_name", "mime_type", "size", "kind")}
                 for a in m.get("attachments", [])
@@ -479,12 +488,23 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             msg = None
         if not msg or not msg.get("content"):
             raise HTTPException(status_code=404, detail="Mensaje no encontrado")
-        pdf_bytes = _consulting_pdf(case_doc["title"], msg["content"], case_id)
-        safe = re.sub(r"[^\w\-]", "_", case_doc["title"])[:40]
+        content = msg["content"]
+        title = case_doc["title"]
+        if data.only_document:
+            blocks = DOC_BLOCK_RE.findall(content)
+            if not blocks:
+                raise HTTPException(status_code=400, detail="Este mensaje no contiene un documento delimitado. Usa 'Exportar respuesta completa' o pide al consultor que redacte el documento.")
+            title = blocks[0][0].strip() or case_doc["title"]
+            content = "\n\n".join(b[1].strip() for b in blocks)
+        else:
+            content = DOC_BLOCK_RE.sub(lambda mt: f"## {mt.group(1).strip()}\n\n{mt.group(2).strip()}", content)
+        pdf_bytes = _consulting_pdf(title, content, case_id)
+        safe = re.sub(r"[^\w\-]", "_", title)[:50]
+        prefix = "Documento" if data.only_document else "Consultoria"
         return StreamingResponse(
             BytesIO(pdf_bytes),
             media_type="application/pdf",
-            headers={"Content-Disposition": f'attachment; filename="Consultoria_{safe}.pdf"'},
+            headers={"Content-Disposition": f'attachment; filename="{prefix}_{safe}.pdf"'},
         )
 
     return router
