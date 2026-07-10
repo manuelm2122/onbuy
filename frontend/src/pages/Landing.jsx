@@ -13,6 +13,9 @@ import {
   BrainCircuit,
   FileBadge,
   CheckCircle2,
+  Scale,
+  FileSignature,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
@@ -120,6 +123,7 @@ export default function Landing() {
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-300">
             <a href="#como-funciona" className="hover:text-white transition-colors" data-testid="nav-link-como-funciona">Cómo funciona</a>
             <a href="#servicios" className="hover:text-white transition-colors" data-testid="nav-link-servicios">Servicios</a>
+            <a href="#consultoria" className="hover:text-white transition-colors" data-testid="nav-link-consultoria">Consultoría</a>
             <a href="#precios" className="hover:text-white transition-colors" data-testid="nav-link-precios">Precios</a>
             <a href="#contacto" className="hover:text-white transition-colors" data-testid="nav-link-contacto">Contacto</a>
           </div>
@@ -309,6 +313,123 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* CONSULTORÍA INCLUIDA */}
+      <section id="consultoria" className="bg-white py-24 lg:py-32" data-testid="section-consultoria">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <div className="flex items-center gap-3 mb-4">
+            <p className="text-xs tracking-[0.3em] uppercase text-[#0284C7] font-semibold">Beneficio incluido</p>
+            <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1 rounded-full" data-testid="consultoria-free-badge">
+              Gratis con tu auditoría
+            </span>
+          </div>
+          <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-[#0F172A] max-w-3xl">
+            1 hora de consultoría legal-contable por Zoom, incluida con cualquier auditoría
+          </h2>
+          <p className="text-slate-600 mt-4 max-w-2xl text-sm leading-relaxed">
+            Al adquirir cualquier plan de auditoría, recibes una sesión de 1 hora por Zoom con
+            nuestro consultor. Trabajamos tu caso en un expediente digital potenciado por IA que
+            combina tres especialidades y produce entregables listos para usar.
+          </p>
+
+          <div className="mt-10 grid sm:grid-cols-3 gap-6 max-w-4xl">
+            {[
+              {
+                icon: Scale,
+                title: "Abogado civil, penal y contador",
+                desc: "Análisis integral de tu caso con el marco legal peruano: Código Civil, Código Penal, Ley 27157 y normativa SUNAT.",
+              },
+              {
+                icon: FileSignature,
+                title: "Documentos listos para usar",
+                desc: "Cartas notariales, denuncias, contratos y requerimientos redactados durante la sesión, descargables en PDF.",
+              },
+              {
+                icon: FileBadge,
+                title: "Informe final del expediente",
+                desc: "Al cierre recibes un informe PDF con resumen de hechos, análisis, recomendaciones y todos los documentos emitidos.",
+              },
+            ].map((b, i) => (
+              <motion.div
+                key={b.title}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i}
+                className="flex flex-col gap-3"
+                data-testid={`consultoria-benefit-${i}`}
+              >
+                <b.icon className="text-[#0284C7]" size={26} strokeWidth={1.5} />
+                <h3 className="font-heading font-bold text-[#0F172A] text-sm">{b.title}</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">{b.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-14 grid md:grid-cols-3 gap-6">
+            {[
+              {
+                src: "/previews/consultoria-chat.jpg",
+                caption: "Expediente del caso: análisis legal y documentos redactados al instante",
+              },
+              {
+                src: "/previews/consultoria-biblioteca.jpg",
+                caption: "Biblioteca del expediente: cada documento descargable en PDF",
+              },
+              {
+                src: "/previews/consultoria-imagen.jpg",
+                caption: "Diagramas y evidencia visual generados con IA para tu caso",
+              },
+            ].map((s, i) => (
+              <motion.figure
+                key={s.src}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-60px" }}
+                custom={i}
+                className="group"
+                data-testid={`consultoria-preview-${i}`}
+              >
+                <div className="border border-slate-200 rounded-lg overflow-hidden shadow-lg shadow-slate-200/60 group-hover:shadow-xl group-hover:border-[#0284C7]/40 transition-all">
+                  <div className="bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-300" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
+                    <span className="ml-2 text-[10px] text-slate-400 font-medium">OnBuySolutions — Consultoría</span>
+                  </div>
+                  <img src={s.src} alt={s.caption} loading="lazy" className="w-full h-auto" />
+                </div>
+                <figcaption className="mt-3 text-xs text-slate-500 leading-relaxed flex items-start gap-2">
+                  <CheckCircle2 className="text-[#0284C7] shrink-0 mt-0.5" size={14} />
+                  {s.caption}
+                </figcaption>
+              </motion.figure>
+            ))}
+          </div>
+
+          <div className="mt-12 bg-[#F8FAFC] border border-slate-200 p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6" data-testid="consultoria-zoom-banner">
+            <div className="flex items-start gap-4">
+              <Video className="text-[#0284C7] shrink-0" size={28} strokeWidth={1.5} />
+              <div>
+                <h3 className="font-heading font-bold text-[#0F172A]">Sesión en vivo por Zoom</h3>
+                <p className="text-sm text-slate-500 mt-1 max-w-xl leading-relaxed">
+                  Agenda tu hora al confirmar tu auditoría: revisamos juntos tus hallazgos, resolvemos
+                  tus dudas legales y contables, y te entregamos los documentos de tu expediente.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/acceso"
+              data-testid="consultoria-cta"
+              className="shrink-0 inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-6 py-3 rounded-full text-sm transition-colors"
+            >
+              Empezar mi auditoría <ArrowRight size={16} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* PRECIOS */}
       <section id="precios" className="bg-[#020617] py-24 lg:py-32 grain relative">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 relative">
@@ -378,6 +499,12 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
+                <div className="mt-6 bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 flex items-start gap-3 rounded" data-testid={`${p.testid}-consultoria-bonus`}>
+                  <Video className="text-emerald-400 shrink-0 mt-0.5" size={16} />
+                  <p className="text-xs text-emerald-300 leading-relaxed">
+                    <b>GRATIS:</b> 1 hora de consultoría legal-contable por Zoom con tu auditoría.
+                  </p>
+                </div>
                 <Link
                   to="/acceso"
                   data-testid={`${p.testid}-cta`}
