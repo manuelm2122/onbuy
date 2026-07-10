@@ -28,6 +28,7 @@ import { AdminDocGenerator } from "@/components/AdminDocGenerator";
 import { AdminAuthorizations } from "@/components/AdminAuthorizations";
 import { AdminUsers } from "@/components/AdminUsers";
 import { AdminSettings } from "@/components/AdminSettings";
+import { AdminConsulting } from "@/components/AdminConsulting";
 
 const SAMPLE_CATS = {
   estado_cuenta: "Estado de cuenta",
@@ -291,6 +292,11 @@ export default function Panel() {
               </TabsTrigger>
             )}
             {user?.role === "admin" && (
+              <TabsTrigger value="consultoria" data-testid="tab-consultoria-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Consultoría
+              </TabsTrigger>
+            )}
+            {user?.role === "admin" && (
               <TabsTrigger value="clientes" data-testid="tab-clientes-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
                 Clientes
               </TabsTrigger>
@@ -459,6 +465,11 @@ export default function Panel() {
           {user?.role === "admin" && (
             <TabsContent value="documentos" className="mt-8">
               <AdminDocGenerator />
+            </TabsContent>
+          )}
+          {user?.role === "admin" && (
+            <TabsContent value="consultoria" className="mt-8">
+              <AdminConsulting />
             </TabsContent>
           )}
           {user?.role === "admin" && (

@@ -33,6 +33,7 @@ from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle
 
 from documents_generator import build_document, ADMIN_DOC_TYPES
+from consulting import create_consulting_router
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -1040,6 +1041,7 @@ async def root():
     return {"message": "OnBuySolutions API", "status": "ok"}
 
 
+api_router.include_router(create_consulting_router(db, get_current_user, get_app_settings, UPLOAD_DIR))
 app.include_router(api_router)
 
 app.add_middleware(
@@ -1057,6 +1059,7 @@ async def startup():
     await db.login_attempts.create_index("identifier")
     await db.audits.create_index("user_id")
     await db.documents.create_index("audit_id")
+    await db.case_messages.create_index("case_id")
     if not SAMPLES_DIR.exists() or not any(SAMPLES_DIR.iterdir()):
         from generate_samples import generate_all
         generate_all(SAMPLES_DIR)
