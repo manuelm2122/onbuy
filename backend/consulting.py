@@ -88,6 +88,7 @@ class ImageGenInput(BaseModel):
 class ExportPdfInput(BaseModel):
     message_id: str
     only_document: bool = False
+    doc_index: Optional[int] = None
 
 
 DOC_BLOCK_RE = re.compile(r"<<<DOCUMENTO:\s*(.*?)\s*>>>\s*\n?(.*?)<<<FIN_DOCUMENTO>>>", re.DOTALL)
@@ -478,6 +479,23 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                     filename = a["filename"]
         return FileResponse(path, filename=filename)
 
+    @router.get("/{case_id}/documents")
+    async def list_case_documents(case_id: str, user: dict = Depends(get_current_user)):
+        _require_admin(user)
+        await _get_case(case_id)
+        msgs = await db.case_messages.find({"case_id": case_id, "role": "assistant"}).sort("created_at", 1).to_list(1000)
+        docs = []
+        for m in msgs:
+            for idx, (title, body) in enumerate(DOC_BLOCK_RE.findall(m.get("content", ""))):
+                docs.append({
+                    "message_id": str(m["_id"]),
+                    "doc_index": idx,
+                    "title": title.strip() or "Documento sin título",
+                    "preview": re.sub(r"[#*|>`\-]", "", body.strip())[:160],
+                    "created_at": m["created_at"],
+                })
+        return docs
+
     @router.post("/{case_id}/export-pdf")
     async def export_case_pdf(case_id: str, data: ExportPdfInput, user: dict = Depends(get_current_user)):
         _require_admin(user)
@@ -494,12 +512,18 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             blocks = DOC_BLOCK_RE.findall(content)
             if not blocks:
                 raise HTTPException(status_code=400, detail="Este mensaje no contiene un documento delimitado. Usa 'Exportar respuesta completa' o pide al consultor que redacte el documento.")
+            if data.doc_index is not None:
+                if data.doc_index < 0 or data.doc_index >= len(blocks):
+                    raise HTTPException(status_code=404, detail="Documento no encontrado en este mensaje")
+                blocks = [blocks[data.doc_index]]
             title = blocks[0][0].strip() or case_doc["title"]
             content = "\n\n".join(b[1].strip() for b in blocks)
         else:
             content = DOC_BLOCK_RE.sub(lambda mt: f"## {mt.group(1).strip()}\n\n{mt.group(2).strip()}", content)
         pdf_bytes = _consulting_pdf(title, content, case_id)
-        safe = re.sub(r"[^\w\-]", "_", title)[:50]
+        import unicodedata
+        ascii_title = unicodedata.normalize("NFKD", title).encode("ascii", "ignore").decode("ascii")
+        safe = re.sub(r"[^\w\-]", "_", ascii_title)[:50]
         prefix = "Documento" if data.only_document else "Consultoria"
         return StreamingResponse(
             BytesIO(pdf_bytes),

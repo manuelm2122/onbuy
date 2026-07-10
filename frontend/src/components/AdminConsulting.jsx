@@ -132,6 +132,9 @@ export const AdminConsulting = () => {
   const [newDialog, setNewDialog] = useState(false);
   const [editDialog, setEditDialog] = useState(false);
   const [imgDialog, setImgDialog] = useState(false);
+  const [libDialog, setLibDialog] = useState(false);
+  const [libraryDocs, setLibraryDocs] = useState(null);
+  const [libExporting, setLibExporting] = useState(null);
   const [caseForm, setCaseForm] = useState({ title: "", description: "" });
   const [imgPrompt, setImgPrompt] = useState("");
   const [generatingImg, setGeneratingImg] = useState(false);
@@ -289,6 +292,51 @@ export const AdminConsulting = () => {
     }
   };
 
+  const openLibrary = async () => {
+    setLibDialog(true);
+    setLibraryDocs(null);
+    try {
+      const { data } = await api.get(`/admin/cases/${selected.id}/documents`);
+      setLibraryDocs(data);
+    } catch {
+      toast.error("No se pudo cargar la biblioteca de documentos");
+      setLibraryDocs([]);
+    }
+  };
+
+  const downloadLibraryDoc = async (doc) => {
+    const key = `${doc.message_id}-${doc.doc_index}`;
+    setLibExporting(key);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/admin/cases/${selected.id}/export-pdf`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message_id: doc.message_id, only_document: true, doc_index: doc.doc_index }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(formatApiErrorDetail(err.detail) || "No se pudo generar el PDF");
+      }
+      const cd = res.headers.get("Content-Disposition") || "";
+      const match = cd.match(/filename="(.+)"/);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = match ? match[1] : `Documento_${doc.title.replace(/[^\w-]/g, "_").slice(0, 40)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`"${doc.title}" descargado en PDF`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLibExporting(null);
+    }
+  };
+
   const exportPdf = async (messageId, onlyDocument = false) => {
     setExporting(messageId);
     try {
@@ -430,6 +478,13 @@ export const AdminConsulting = () => {
                 title="Editar caso"
               >
                 <Pencil size={15} />
+              </button>
+              <button
+                onClick={openLibrary}
+                data-testid="library-btn"
+                className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] text-slate-500 font-semibold px-3 py-1.5 rounded-full text-xs transition-colors"
+              >
+                <FolderOpen size={13} /> Documentos
               </button>
               <button
                 onClick={() => setImgDialog(true)}
@@ -594,6 +649,60 @@ export const AdminConsulting = () => {
               {saving ? "Guardando…" : "Guardar cambios"}
             </button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogo biblioteca de documentos */}
+      <Dialog open={libDialog} onOpenChange={setLibDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-xl">Biblioteca de documentos</DialogTitle>
+            <DialogDescription>
+              Todos los documentos redactados por el consultor en este expediente, listos para descargar en PDF.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[50vh] overflow-y-auto -mx-1 px-1" data-testid="library-list">
+            {!libraryDocs ? (
+              <div className="py-10 flex justify-center">
+                <Loader2 className="animate-spin text-[#0284C7]" size={20} />
+              </div>
+            ) : libraryDocs.length === 0 ? (
+              <div className="py-10 text-center" data-testid="library-empty">
+                <FileText className="mx-auto text-slate-300" size={32} strokeWidth={1.2} />
+                <p className="text-xs text-slate-500 mt-3 max-w-xs mx-auto leading-relaxed">
+                  Aún no hay documentos redactados en este caso. Pídele al consultor que redacte una carta,
+                  denuncia, contrato o informe y aparecerá aquí automáticamente.
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {libraryDocs.map((d) => {
+                  const key = `${d.message_id}-${d.doc_index}`;
+                  return (
+                    <li key={key} className="py-3.5 flex items-center justify-between gap-3" data-testid={`library-doc-${key}`}>
+                      <div className="flex items-start gap-3 min-w-0">
+                        <FileText className="text-[#0284C7] shrink-0 mt-0.5" size={18} strokeWidth={1.5} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#0F172A] truncate">{d.title}</p>
+                          <p className="text-[11px] text-slate-400 truncate">{d.preview}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{fmtDate(d.created_at)}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => downloadLibraryDoc(d)}
+                        disabled={libExporting === key}
+                        data-testid={`library-download-${key}`}
+                        className="shrink-0 inline-flex items-center gap-1.5 bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-50 text-white font-semibold px-3.5 py-2 rounded-full text-[11px] transition-colors"
+                      >
+                        <Download size={12} />
+                        {libExporting === key ? "Descargando…" : "PDF"}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
