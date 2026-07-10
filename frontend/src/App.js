@@ -7,6 +7,7 @@ import AuthPage from "@/pages/AuthPage";
 import Panel from "@/pages/Panel";
 import AuditDetail from "@/pages/AuditDetail";
 import LegalPage from "@/pages/LegalPage";
+import ComplaintsPage from "@/pages/ComplaintsPage";
 
 const Protected = ({ children }) => {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ function App() {
           <Route path="/terminos" element={<LegalPage />} />
           <Route path="/privacidad" element={<LegalPage />} />
           <Route path="/uso-ia" element={<LegalPage />} />
+          <Route path="/libro-de-reclamaciones" element={<ComplaintsPage />} />
           <Route
             path="/panel"
             element={

@@ -102,6 +102,30 @@ class SettingsInput(BaseModel):
     empresa_direccion: Optional[str] = None
     empresa_ciudad: Optional[str] = None
     llm_key: Optional[str] = None
+    resend_api_key: Optional[str] = None
+    resend_sender: Optional[str] = None
+    complaints_notify_email: Optional[str] = None
+
+
+class ComplaintInput(BaseModel):
+    consumer_name: str = Field(min_length=3)
+    doc_type: str
+    doc_number: str = Field(min_length=6, max_length=15)
+    address: str = Field(min_length=5)
+    phone: str = Field(min_length=6, max_length=15)
+    email: EmailStr
+    item_type: str
+    amount: Optional[float] = None
+    service_description: str = Field(min_length=5)
+    request_type: str
+    detail: str = Field(min_length=10)
+    consumer_request: str = Field(min_length=5)
+    accepted_declaration: bool = False
+
+
+class ComplaintStatusInput(BaseModel):
+    status: str
+    response_note: Optional[str] = None
 
 
 class AdminDocInput(BaseModel):

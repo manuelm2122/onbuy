@@ -632,6 +632,14 @@ export default function Landing() {
             <Link to="/uso-ia" className="hover:text-white transition-colors" data-testid="footer-link-uso-ia">
               Aviso de Uso de IA
             </Link>
+            <Link
+              to="/libro-de-reclamaciones"
+              data-testid="footer-link-libro-reclamaciones"
+              className="inline-flex items-center gap-2 border border-slate-700 hover:border-[#0EA5E9] hover:text-white px-3.5 py-2 rounded transition-colors"
+            >
+              <img src="/libro-reclamaciones.png" alt="Libro de Reclamaciones" className="w-7 h-7 object-contain" />
+              <span className="font-semibold leading-tight">Libro de<br />Reclamaciones</span>
+            </Link>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 lg:px-10 mt-6 pt-6 border-t border-slate-900">

@@ -66,6 +66,8 @@ SETTINGS_DEFAULTS = {
     "empresa_dni": "",
     "empresa_direccion": "",
     "empresa_ciudad": "Lima",
+    "resend_sender": "onboarding@resend.dev",
+    "complaints_notify_email": "onbuysolutions@gmail.com",
 }
 
 
@@ -73,4 +75,9 @@ async def get_app_settings() -> dict:
     doc = await db.settings.find_one({"_id": "app"}) or {}
     merged = {**SETTINGS_DEFAULTS, **{k: v for k, v in doc.items() if k != "_id" and v not in (None, "")}}
     merged["llm_key"] = doc.get("llm_key") or os.environ.get("EMERGENT_LLM_KEY", "")
+    merged["resend_api_key"] = doc.get("resend_api_key") or os.environ.get("RESEND_API_KEY", "")
+    if not doc.get("resend_sender"):
+        merged["resend_sender"] = os.environ.get("SENDER_EMAIL", SETTINGS_DEFAULTS["resend_sender"])
+    if not doc.get("complaints_notify_email"):
+        merged["complaints_notify_email"] = os.environ.get("COMPLAINTS_NOTIFY_EMAIL", SETTINGS_DEFAULTS["complaints_notify_email"])
     return merged
