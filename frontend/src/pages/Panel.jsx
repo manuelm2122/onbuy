@@ -29,6 +29,7 @@ import { AdminAuthorizations } from "@/components/AdminAuthorizations";
 import { AdminUsers } from "@/components/AdminUsers";
 import { AdminSettings } from "@/components/AdminSettings";
 import { AdminConsulting } from "@/components/AdminConsulting";
+import { AdminContacts } from "@/components/AdminContacts";
 
 const SAMPLE_CATS = {
   estado_cuenta: "Estado de cuenta",
@@ -302,6 +303,11 @@ export default function Panel() {
               </TabsTrigger>
             )}
             {user?.role === "admin" && (
+              <TabsTrigger value="mensajes" data-testid="tab-mensajes-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Mensajes
+              </TabsTrigger>
+            )}
+            {user?.role === "admin" && (
               <TabsTrigger value="configuracion" data-testid="tab-configuracion-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
                 Configuración
               </TabsTrigger>
@@ -475,6 +481,11 @@ export default function Panel() {
           {user?.role === "admin" && (
             <TabsContent value="clientes" className="mt-8">
               <AdminUsers />
+            </TabsContent>
+          )}
+          {user?.role === "admin" && (
+            <TabsContent value="mensajes" className="mt-8">
+              <AdminContacts />
             </TabsContent>
           )}
           {user?.role === "admin" && (
