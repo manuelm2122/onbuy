@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileSignature, Download, Building2, Briefcase } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
+import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
 
 const DOC_TYPES = [
   { value: "propuesta", label: "Propuesta comercial de venta" },
@@ -74,11 +74,31 @@ export const AdminDocGenerator = () => {
   const [docType, setDocType] = useState("propuesta");
   const [f, setF] = useState(initialFields);
   const [generating, setGenerating] = useState(false);
+  const [prices, setPrices] = useState({ small: 1100, medium: 2100 });
+
+  useEffect(() => {
+    api
+      .get("/admin/settings")
+      .then(({ data }) => {
+        setPrices({ small: data.price_small, medium: data.price_medium });
+        setF((prev) => ({
+          ...prev,
+          empresa_razon_social: data.empresa_razon_social || prev.empresa_razon_social,
+          empresa_ruc: data.empresa_ruc || prev.empresa_ruc,
+          empresa_representante: data.empresa_representante || prev.empresa_representante,
+          empresa_dni: data.empresa_dni || prev.empresa_dni,
+          empresa_direccion: data.empresa_direccion || prev.empresa_direccion,
+          ciudad: data.empresa_ciudad || prev.ciudad,
+          monto: prev.plan === "mediano" ? String(data.price_medium) : String(data.price_small),
+        }));
+      })
+      .catch(() => {});
+  }, []);
 
   const set = (field, value) => setF((prev) => ({ ...prev, [field]: value }));
 
   const setPlan = (plan) =>
-    setF((prev) => ({ ...prev, plan, monto: plan === "mediano" ? "2100" : "1100" }));
+    setF((prev) => ({ ...prev, plan, monto: String(plan === "mediano" ? prices.medium : prices.small) }));
 
   const generate = async () => {
     setGenerating(true);

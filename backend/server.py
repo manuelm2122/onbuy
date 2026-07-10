@@ -8,6 +8,7 @@ import os
 import re
 import json
 import uuid
+import shutil
 import logging
 import bcrypt
 import jwt
@@ -56,6 +57,26 @@ SAMPLE_META = {
     "recibos_mantenimiento_enero_2025.csv": {"category": "recibo", "description": "Detalle de cuotas de mantenimiento cobradas a los 30 departamentos."},
     "presupuesto_anual_2025.xlsx": {"category": "presupuesto", "description": "Presupuesto anual 2025 del condominio (egresos e ingresos)."},
 }
+
+SETTINGS_DEFAULTS = {
+    "ai_model": "gemini-3.1-pro-preview",
+    "price_small": 1100.0,
+    "price_medium": 2100.0,
+    "contact_email": "contacto@onbuysolutions.com",
+    "empresa_razon_social": "OnBuySolutions S.A.C.",
+    "empresa_ruc": "",
+    "empresa_representante": "",
+    "empresa_dni": "",
+    "empresa_direccion": "",
+    "empresa_ciudad": "Lima",
+}
+
+
+async def get_app_settings() -> dict:
+    doc = await db.settings.find_one({"_id": "app"}) or {}
+    merged = {**SETTINGS_DEFAULTS, **{k: v for k, v in doc.items() if k != "_id" and v not in (None, "")}}
+    merged["llm_key"] = doc.get("llm_key") or os.environ.get("EMERGENT_LLM_KEY", "")
+    return merged
 
 JWT_ALGORITHM = "HS256"
 MAX_FILE_SIZE = 20 * 1024 * 1024
@@ -160,6 +181,25 @@ class ContactInput(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     message: str = Field(min_length=5)
+
+
+class ChangePasswordInput(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=6)
+
+
+class SettingsInput(BaseModel):
+    ai_model: Optional[str] = None
+    price_small: Optional[float] = None
+    price_medium: Optional[float] = None
+    contact_email: Optional[str] = None
+    empresa_razon_social: Optional[str] = None
+    empresa_ruc: Optional[str] = None
+    empresa_representante: Optional[str] = None
+    empresa_dni: Optional[str] = None
+    empresa_direccion: Optional[str] = None
+    empresa_ciudad: Optional[str] = None
+    llm_key: Optional[str] = None
 
 
 def hash_password(password: str) -> str:
@@ -281,6 +321,21 @@ async def me(user: dict = Depends(get_current_user)):
     return {"id": user["_id"], "email": user["email"], "name": user["name"], "role": user.get("role", "cliente")}
 
 
+@api_router.post("/auth/change-password")
+async def change_password(data: ChangePasswordInput, user: dict = Depends(get_current_user)):
+    full = await db.users.find_one({"_id": ObjectId(user["_id"])})
+    if not verify_password(data.current_password, full["password_hash"]):
+        raise HTTPException(status_code=401, detail="La contraseña actual es incorrecta")
+    await db.users.update_one(
+        {"_id": full["_id"]},
+        {"$set": {
+            "password_hash": hash_password(data.new_password),
+            "password_changed_at": datetime.now(timezone.utc).isoformat(),
+        }},
+    )
+    return {"message": "Contraseña actualizada correctamente"}
+
+
 # ---------- AUDITS ----------
 
 @api_router.post("/audits", response_model=Audit, response_model_by_alias=False)
@@ -324,7 +379,10 @@ async def get_audit(audit_id: str, user: dict = Depends(get_current_user)):
 
 @api_router.delete("/audits/{audit_id}")
 async def delete_audit(audit_id: str, user: dict = Depends(get_current_user)):
-    doc = await db.audits.find_one({"_id": ObjectId(audit_id), "user_id": user["_id"]})
+    query = {"_id": ObjectId(audit_id)}
+    if user.get("role") != "admin":
+        query["user_id"] = user["_id"]
+    doc = await db.audits.find_one(query)
     if not doc:
         raise HTTPException(status_code=404, detail="Auditoría no encontrada")
     docs = await db.documents.find({"audit_id": audit_id}).to_list(500)
@@ -332,9 +390,10 @@ async def delete_audit(audit_id: str, user: dict = Depends(get_current_user)):
         p = Path(d["stored_path"])
         if p.exists():
             p.unlink()
+    shutil.rmtree(UPLOAD_DIR / audit_id, ignore_errors=True)
     await db.documents.delete_many({"audit_id": audit_id})
     await db.audits.delete_one({"_id": ObjectId(audit_id)})
-    return {"message": "Auditoría eliminada"}
+    return {"message": "Auditoría eliminada por completo (documentos incluidos)"}
 
 
 # ---------- DOCUMENTS ----------
@@ -488,11 +547,12 @@ async def _classify_uploaded_documents(doc_ids: List[str]):
             'Responde ÚNICAMENTE un objeto JSON válido con el formato {"nombre_del_archivo": "categoria"}, '
             "sin texto adicional ni bloques de código."
         )
+        cfg = await get_app_settings()
         chat = LlmChat(
-            api_key=os.environ["EMERGENT_LLM_KEY"],
+            api_key=cfg["llm_key"],
             session_id=f"classify-{uuid.uuid4().hex[:8]}",
             system_message="Eres un clasificador de documentos financieros de condominios en Perú. Respondes únicamente JSON válido.",
-        ).with_model("gemini", "gemini-3.1-pro-preview")
+        ).with_model("gemini", cfg["ai_model"])
         chunks = []
         async for ev in chat.stream_message(UserMessage(text=prompt, file_contents=file_contents)):
             if isinstance(ev, TextDelta):
@@ -551,11 +611,12 @@ DOCUMENTOS ADJUNTOS ({len(docs)}):
 
 Genera el informe completo siguiendo la estructura exacta indicada."""
 
+    cfg = await get_app_settings()
     chat = LlmChat(
-        api_key=os.environ["EMERGENT_LLM_KEY"],
+        api_key=cfg["llm_key"],
         session_id=f"audit-{audit_id}-{uuid.uuid4().hex[:8]}",
         system_message=AUDIT_SYSTEM_PROMPT,
-    ).with_model("gemini", "gemini-3.1-pro-preview")
+    ).with_model("gemini", cfg["ai_model"])
 
     await db.audits.update_one({"_id": ObjectId(audit_id)}, {"$set": {"status": "analizando"}})
 
@@ -824,6 +885,87 @@ async def admin_revoke_audit(audit_id: str, user: dict = Depends(get_current_use
     return {"message": "Autorización revocada"}
 
 
+# ---------- ADMIN: USERS ----------
+
+@api_router.get("/admin/users")
+async def admin_list_users(user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    docs = await db.users.find({}).sort("created_at", -1).to_list(1000)
+    out = []
+    for d in docs:
+        uid = str(d["_id"])
+        out.append({
+            "id": uid,
+            "name": d.get("name", "—"),
+            "email": d["email"],
+            "role": d.get("role", "cliente"),
+            "created_at": d.get("created_at"),
+            "audit_count": await db.audits.count_documents({"user_id": uid}),
+            "document_count": await db.documents.count_documents({"user_id": uid}),
+        })
+    return out
+
+
+@api_router.delete("/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    target = await db.users.find_one({"_id": ObjectId(user_id)})
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if target.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="No se puede eliminar una cuenta de administrador")
+    docs = await db.documents.find({"user_id": user_id}).to_list(2000)
+    for d in docs:
+        p = Path(d["stored_path"])
+        if p.exists():
+            p.unlink()
+    audits = await db.audits.find({"user_id": user_id}).to_list(1000)
+    for a in audits:
+        shutil.rmtree(UPLOAD_DIR / str(a["_id"]), ignore_errors=True)
+    await db.documents.delete_many({"user_id": user_id})
+    await db.audits.delete_many({"user_id": user_id})
+    await db.users.delete_one({"_id": ObjectId(user_id)})
+    return {"message": f"Cliente eliminado junto con {len(audits)} auditoría(s) y {len(docs)} documento(s)"}
+
+
+# ---------- ADMIN: SETTINGS ----------
+
+def _mask_key(key: str) -> str:
+    if not key:
+        return ""
+    return f"{key[:12]}…{key[-4:]}" if len(key) > 16 else "•" * len(key)
+
+
+@api_router.get("/admin/settings")
+async def admin_get_settings(user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    s = await get_app_settings()
+    llm_key = s.pop("llm_key", "")
+    s["llm_key_masked"] = _mask_key(llm_key)
+    return s
+
+
+@api_router.put("/admin/settings")
+async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_current_user)):
+    _require_admin(user)
+    updates = data.model_dump(exclude_none=True)
+    if "llm_key" in updates and not str(updates["llm_key"]).strip():
+        updates.pop("llm_key")
+    updates["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.settings.update_one({"_id": "app"}, {"$set": updates}, upsert=True)
+    return {"message": "Configuración guardada. Los cambios se aplican de inmediato."}
+
+
+@api_router.get("/public/settings")
+async def public_settings():
+    s = await get_app_settings()
+    return {
+        "price_small": s["price_small"],
+        "price_medium": s["price_medium"],
+        "contact_email": s["contact_email"],
+    }
+
+
 # ---------- ADMIN DOCUMENT GENERATOR ----------
 
 class AdminDocInput(BaseModel):
@@ -935,7 +1077,7 @@ async def startup():
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
         logger.info("Admin user seeded")
-    elif not verify_password(admin_password, existing["password_hash"]):
+    elif not existing.get("password_changed_at") and not verify_password(admin_password, existing["password_hash"]):
         await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
 
 

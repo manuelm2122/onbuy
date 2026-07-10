@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { BadgeCheck, Ban, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Ban, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
 
@@ -42,6 +42,20 @@ export const AdminAuthorizations = () => {
     setActing(id);
     try {
       const { data } = await api.post(`/admin/audits/${id}/${action}`);
+      toast.success(data.message);
+      load();
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const removeAudit = async (id, name) => {
+    if (!window.confirm(`¿Eliminar por completo la auditoría "${name}" y todos sus documentos? Esta acción es irreversible.`)) return;
+    setActing(id);
+    try {
+      const { data } = await api.delete(`/audits/${id}`);
       toast.success(data.message);
       load();
     } catch (err) {
@@ -114,27 +128,38 @@ export const AdminAuthorizations = () => {
                     <Pill meta={PAYMENT[a.payment_status] || PAYMENT.pendiente_pago} />
                   </td>
                   <td className="px-5 py-4 text-right">
-                    {a.payment_status === "pendiente_pago" ? (
+                    <div className="inline-flex items-center gap-2">
+                      {a.payment_status === "pendiente_pago" ? (
+                        <button
+                          onClick={() => act(a.id, "authorize")}
+                          disabled={acting === a.id}
+                          data-testid={`authorize-audit-btn-${a.id}`}
+                          className="inline-flex items-center gap-1.5 bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-60 text-white font-semibold px-4 py-2 rounded-full text-xs transition-colors"
+                        >
+                          <BadgeCheck size={14} />
+                          {acting === a.id ? "Autorizando…" : "Autorizar"}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => act(a.id, "revoke")}
+                          disabled={acting === a.id}
+                          data-testid={`revoke-audit-btn-${a.id}`}
+                          className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-red-400 hover:text-red-600 disabled:opacity-60 text-slate-500 font-semibold px-4 py-2 rounded-full text-xs transition-colors"
+                        >
+                          <Ban size={14} />
+                          {acting === a.id ? "Revocando…" : "Revocar"}
+                        </button>
+                      )}
                       <button
-                        onClick={() => act(a.id, "authorize")}
+                        onClick={() => removeAudit(a.id, a.condominium_name)}
                         disabled={acting === a.id}
-                        data-testid={`authorize-audit-btn-${a.id}`}
-                        className="inline-flex items-center gap-1.5 bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-60 text-white font-semibold px-4 py-2 rounded-full text-xs transition-colors"
+                        data-testid={`admin-delete-audit-btn-${a.id}`}
+                        title="Eliminar auditoría por completo"
+                        className="text-slate-400 hover:text-red-600 disabled:opacity-40 transition-colors p-1.5"
                       >
-                        <BadgeCheck size={14} />
-                        {acting === a.id ? "Autorizando…" : "Autorizar"}
+                        <Trash2 size={15} />
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => act(a.id, "revoke")}
-                        disabled={acting === a.id}
-                        data-testid={`revoke-audit-btn-${a.id}`}
-                        className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-red-400 hover:text-red-600 disabled:opacity-60 text-slate-500 font-semibold px-4 py-2 rounded-full text-xs transition-colors"
-                      >
-                        <Ban size={14} />
-                        {acting === a.id ? "Revocando…" : "Revocar"}
-                      </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}

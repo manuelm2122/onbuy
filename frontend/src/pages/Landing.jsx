@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -83,6 +83,15 @@ const features = [
 ];
 
 export default function Landing() {
+  const [pricing, setPricing] = useState({ price_small: 1100, price_medium: 2100 });
+
+  useEffect(() => {
+    api
+      .get("/public/settings")
+      .then(({ data }) => setPricing(data))
+      .catch(() => {});
+  }, []);
+
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [sending, setSending] = useState(false);
 
@@ -316,14 +325,14 @@ export default function Landing() {
               {
                 name: "Condominio pequeño",
                 target: "Menos de 50 departamentos",
-                price: "1,100",
+                price: Number(pricing.price_small).toLocaleString("es-PE"),
                 testid: "pricing-card-pequeno",
                 featured: false,
               },
               {
                 name: "Condominio mediano a grande",
                 target: "De 50 a 150 departamentos",
-                price: "2,100",
+                price: Number(pricing.price_medium).toLocaleString("es-PE"),
                 testid: "pricing-card-mediano",
                 featured: true,
               },

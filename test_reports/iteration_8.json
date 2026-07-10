@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 8 — validated new admin features: user management, dynamic settings, admin-level audit deletion, change-password, dynamic landing pricing, and regression on audit creation + document upload. Backend: 14/14 pytest tests pass. Frontend: 7/7 Playwright flows pass. All state restored (admin password OnBuy2026!, price_small=1100).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_features.py",
+    "/app/test_reports/pytest/iter8_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is 1087 lines — consider splitting into routers (auth, audits, admin, documents) to keep files under ~700 lines per code review guideline.",
+    "GET /api/admin/users triggers N+1 count_documents queries per user (2 per user). For scale, consider MongoDB aggregation with $lookup or precomputed counters.",
+    "public_settings and admin_get_settings both fully call get_app_settings; masking is done by popping llm_key from the returned dict — verify get_app_settings does not return a shared mutable reference (would cause the mutation to leak across requests). Currently OK if it returns a fresh dict each call.",
+    "Email normalization (lower/strip) is done in register/login but tests should be aware — good code, just document."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_features.py"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "100% (7/7)"},
+  "test_credentials": "Admin: admin@onbuysolutions.com / OnBuy2026! (restored); Cliente: cliente@test.com / Cliente123!",
+  "seed_data_creation": "Created a persistent cliente@test.com if it didn't exist, plus transient TEST_* users cleaned up during tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend suite at /app/backend/tests/test_admin_features.py must be run with `-n 0` (serial) because loadscope-based xdist causes duplicate email registration between workers (same module-scoped fixture). Consider migrating to per-worker unique emails or moving fixtures to session scope with xdist compatibility if you need parallel runs. Admin password reset is guarded by password_changed_at; do not reset it. Settings restored to price_small=1100, price_medium=2100.",
+  "rca of the issue": "N/A — no bugs found in this iteration."
+}

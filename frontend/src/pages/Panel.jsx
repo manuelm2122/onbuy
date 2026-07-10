@@ -26,6 +26,8 @@ import { useAuth } from "@/context/AuthContext";
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
 import { AdminDocGenerator } from "@/components/AdminDocGenerator";
 import { AdminAuthorizations } from "@/components/AdminAuthorizations";
+import { AdminUsers } from "@/components/AdminUsers";
+import { AdminSettings } from "@/components/AdminSettings";
 
 const SAMPLE_CATS = {
   estado_cuenta: "Estado de cuenta",
@@ -268,7 +270,7 @@ export default function Panel() {
         </div>
 
         <Tabs defaultValue="resumen">
-          <TabsList className="bg-white border border-slate-200 p-1 h-auto">
+          <TabsList className="bg-white border border-slate-200 p-1 h-auto flex-wrap justify-start">
             <TabsTrigger value="resumen" data-testid="tab-resumen" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
               Resumen
             </TabsTrigger>
@@ -286,6 +288,16 @@ export default function Panel() {
             {user?.role === "admin" && (
               <TabsTrigger value="documentos" data-testid="tab-documentos-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
                 Documentos
+              </TabsTrigger>
+            )}
+            {user?.role === "admin" && (
+              <TabsTrigger value="clientes" data-testid="tab-clientes-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Clientes
+              </TabsTrigger>
+            )}
+            {user?.role === "admin" && (
+              <TabsTrigger value="configuracion" data-testid="tab-configuracion-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Configuración
               </TabsTrigger>
             )}
           </TabsList>
@@ -447,6 +459,16 @@ export default function Panel() {
           {user?.role === "admin" && (
             <TabsContent value="documentos" className="mt-8">
               <AdminDocGenerator />
+            </TabsContent>
+          )}
+          {user?.role === "admin" && (
+            <TabsContent value="clientes" className="mt-8">
+              <AdminUsers />
+            </TabsContent>
+          )}
+          {user?.role === "admin" && (
+            <TabsContent value="configuracion" className="mt-8">
+              <AdminSettings />
             </TabsContent>
           )}
         </Tabs>
