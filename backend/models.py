@@ -38,8 +38,27 @@ class LoginInput(BaseModel):
     password: str
 
 
+class VerifyEmailInput(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+
+
+class ResendCodeInput(BaseModel):
+    email: EmailStr
+
+
 class ChangePasswordInput(BaseModel):
     current_password: str
+    new_password: str = Field(min_length=6)
+
+
+class ForgotPasswordInput(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordInput(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=6)
 
 

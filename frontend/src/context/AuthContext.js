@@ -32,7 +32,27 @@ export const AuthProvider = ({ children }) => {
       password,
       accepted_terms: acceptedTerms,
     });
+    return data;
+  };
+
+  const verifyEmail = async (email, code) => {
+    const { data } = await api.post("/auth/verify-email", { email, code });
     setUser(data);
+    return data;
+  };
+
+  const resendCode = async (email) => {
+    const { data } = await api.post("/auth/resend-code", { email });
+    return data;
+  };
+
+  const forgotPassword = async (email) => {
+    const { data } = await api.post("/auth/forgot-password", { email });
+    return data;
+  };
+
+  const resetPassword = async (email, code, newPassword) => {
+    const { data } = await api.post("/auth/reset-password", { email, code, new_password: newPassword });
     return data;
   };
 
@@ -42,7 +62,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, verifyEmail, resendCode, forgotPassword, resetPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

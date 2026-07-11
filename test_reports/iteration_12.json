@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 12: Comprehensive backend + frontend testing of OTP email verification, forgot/reset password, and regression on admin login + contact endpoint. All 8 backend pytest tests PASSED; all 3 UI E2E flows PASSED.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_auth_otp_reset.py",
+    "/app/test_reports/pytest/iteration_12.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "auth.py verify-email: after MAX_CODE_ATTEMPTS the endpoint returns 429 forever until user solicits a new code — expected behavior, but frontend does not currently surface a specific hint to click 'Reenviar'. Minor UX improvement.",
+    "auth.py login (line ~203): on failed login of unverified user, backend auto re-issues verification code respecting 60s cooldown. Note: this couples login and resend flows — a malicious user could probe verification status by triggering login. Consider always returning same 403 without side-effect timing differences. Non-blocking.",
+    "auth.py forgot-password returns 429 to non-registered emails? Not: it returns generic 200 for non-existent (good). But for existing email it returns 429 with detail — revealing the email exists via cooldown response. Minor info leak. Consider returning generic 200 on cooldown too.",
+    "reset-password sets email_verified=True even for previously unverified user — this is intentional (implicit verification via email code), documented but worth noting for auditability."
+  ],
+  "updated_files": ["/app/backend/tests/test_auth_otp_reset.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (3/3 flows)"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! (admin regression PASS). Test users created dynamically with qa-test-*@test.com and qa-ui-*@test.com then cleaned up.",
+  "seed_data_creation": "Ephemeral test users created via /api/auth/register and deleted from db.users at teardown. No persistent data left behind.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend flow tests use mongosh/pymongo to read verification_code/reset_code directly from db.users. Resend cooldown is 60s — do not run cooldown tests twice back-to-back on same email. Real emails go via Resend (do not spam). Frontend testids used: auth-toggle-mode-btn, auth-name-input, auth-email-input, auth-password-input, auth-terms-checkbox, auth-submit-btn, auth-otp-input, auth-verify-btn, auth-resend-btn, auth-forgot-link, auth-forgot-email-input, auth-forgot-submit-btn, auth-reset-code-input, auth-reset-password-input, auth-reset-submit-btn.",
+  "rca of the issue": "N/A — no issues found."
+}

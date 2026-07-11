@@ -49,6 +49,10 @@ async def startup():
         {"payment_status": {"$exists": False}},
         {"$set": {"payment_status": "autorizada"}},
     )
+    await db.users.update_many(
+        {"email_verified": {"$exists": False}},
+        {"$set": {"email_verified": True}},
+    )
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@onbuysolutions.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "OnBuy2026!")
     existing = await db.users.find_one({"email": admin_email})
