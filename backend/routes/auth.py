@@ -247,7 +247,7 @@ async def forgot_password(data: ForgotPasswordInput, background_tasks: Backgroun
         return generic
     last_sent = user.get("reset_last_sent")
     if last_sent and (datetime.now(timezone.utc) - datetime.fromisoformat(last_sent)).total_seconds() < RESEND_COOLDOWN_SECONDS:
-        raise HTTPException(status_code=429, detail="Espera un minuto antes de solicitar otro código.")
+        return generic
     code = _generate_code()
     now = datetime.now(timezone.utc)
     await db.users.update_one(
