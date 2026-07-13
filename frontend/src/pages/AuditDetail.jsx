@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   ArrowLeft,
   UploadCloud,
@@ -187,13 +188,14 @@ export default function AuditDetail() {
   const displayContent = (analysisContent || "").replace(/^\**DOCUMENTOS_FALTANTES.*$/gm, "").trim();
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="themeable min-h-screen bg-[#F8FAFC]">
       <header className="bg-[#020617] text-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
           <Link to="/" className="font-heading font-black text-lg tracking-tight">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
           <div className="flex items-center gap-5">
+            <ThemeToggle onDark />
             <span className="text-sm text-slate-300 hidden sm:block">{user?.name}</span>
             <button
               onClick={async () => {

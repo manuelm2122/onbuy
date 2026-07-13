@@ -1,7 +1,9 @@
 import "@/App.css";
+import "@/dark-theme.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ThemeProvider, useTheme } from "@/context/ThemeContext";
 import Landing from "@/pages/Landing";
 import AuthPage from "@/pages/AuthPage";
 import Panel from "@/pages/Panel";
@@ -13,7 +15,7 @@ const Protected = ({ children }) => {
   const { user } = useAuth();
   if (user === null)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+      <div className="themeable min-h-screen flex items-center justify-center bg-[#F8FAFC]">
         <div className="w-8 h-8 border-2 border-[#0284C7] border-t-transparent rounded-full animate-spin" data-testid="auth-loading-spinner" />
       </div>
     );
@@ -21,8 +23,14 @@ const Protected = ({ children }) => {
   return children;
 };
 
+const ThemedToaster = () => {
+  const { theme } = useTheme();
+  return <Toaster position="top-right" richColors theme={theme} />;
+};
+
 function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -50,8 +58,9 @@ function App() {
           />
         </Routes>
       </BrowserRouter>
-      <Toaster position="top-right" richColors />
+      <ThemedToaster />
     </AuthProvider>
+    </ThemeProvider>
   );
 }
 

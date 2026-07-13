@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const initial = {
   consumer_name: "",
@@ -77,19 +78,22 @@ export default function ComplaintsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="themeable min-h-screen bg-[#F8FAFC]">
       <header className="bg-[#020617] py-4">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
           <Link to="/" className="font-heading font-black text-white text-lg" data-testid="complaints-logo-link">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
-            data-testid="complaints-back-link"
-          >
-            <ArrowLeft size={14} /> Volver al inicio
-          </Link>
+          <div className="flex items-center gap-4">
+            <ThemeToggle onDark />
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+              data-testid="complaints-back-link"
+            >
+              <ArrowLeft size={14} /> Volver al inicio
+            </Link>
+          </div>
         </div>
       </header>
 

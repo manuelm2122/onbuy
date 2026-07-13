@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, Scale, ShieldCheck, BrainCircuit } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const S = ({ n, title, children }) => (
   <section className="mt-10">
@@ -400,7 +401,7 @@ export default function LegalPage() {
   const Icon = doc.icon;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="themeable min-h-screen bg-[#F8FAFC]">
       <header className="bg-[#020617] text-white">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="font-heading font-black text-lg tracking-tight" data-testid="legal-logo-link">
@@ -410,6 +411,7 @@ export default function LegalPage() {
             <Link to="/terminos" className={`hover:text-white transition-colors ${pathname === "/terminos" ? "text-white font-semibold" : ""}`} data-testid="legal-nav-terminos">Términos</Link>
             <Link to="/privacidad" className={`hover:text-white transition-colors ${pathname === "/privacidad" ? "text-white font-semibold" : ""}`} data-testid="legal-nav-privacidad">Privacidad</Link>
             <Link to="/uso-ia" className={`hover:text-white transition-colors ${pathname === "/uso-ia" ? "text-white font-semibold" : ""}`} data-testid="legal-nav-uso-ia">Uso de IA</Link>
+            <ThemeToggle onDark />
           </nav>
         </div>
       </header>

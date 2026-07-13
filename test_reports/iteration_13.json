@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only dark mode feature test. Overall PASS with one visual regression: native <input>/<textarea> elements (no explicit bg-white class) render with browser-default white background inside dark themeable containers and dialogs. Affects Configuración tab and 'Nueva auditoría' dialog.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Configuración tab (Panel admin)", "issue": "2 <input> elements show white background (rgb(255,255,255)) in dark mode. Inputs use classes 'border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5' but no bg-white or dark:bg-* — browser default white leaks through.", "selector": "input.border.border-slate-300 (inside .themeable)", "priority": "MEDIUM"},
+      {"component": "Nueva auditoría dialog", "issue": "1 input + 1 textarea display white background on dark modal (visible in screenshot /tmp/dialog.png). Same class pattern: 'w-full border border-slate-300 focus:border-[#0284C7] outline-none px-4 py-3'.", "selector": "[role=dialog] input, [role=dialog] textarea (with border-slate-300)", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Configuración + Nueva auditoría dialog", "issues": ["Native form inputs without bg-white class render white in dark mode — text (dark) becomes invisible/hard to read"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Add CSS override in /app/frontend/src/dark-theme.css to target native inputs/textareas inside .themeable and [role=dialog]. Suggested: `.dark :is(.themeable, [role=\"dialog\"], [data-radix-popper-content-wrapper]) :is(input:not([type=checkbox]):not([type=radio]), textarea, select) { background-color: #0F172A; color: #F1F5F9; }` — or explicitly add `bg-white dark:bg-[#0F172A]` classes to those inputs.",
+    "Also override placeholder color: `::placeholder { color: #64748B }` to keep readable in dark mode."
+  ],
+  "critical_code_review_comments": [
+    "dark-theme.css relies exclusively on Tailwind utility class selectors (e.g. .bg-white) to override colors. Any element styled with pure CSS defaults (native <input>, <textarea>) is missed. Consider a base rule targeting form elements directly inside .dark .themeable.",
+    "ThemeContext reads localStorage during useState init (SSR-safe since CRA is CSR) — OK."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "~92% (2 visual bugs of ~15 checkpoints)"},
+  "test_credentials": "Admin: admin@onbuysolutions.com / OnBuy2026! — worked",
+  "seed_data_creation": "None. Did not create audits, complaints or consultoría messages per instruction.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Dark mode implementation is nearly complete. Only the native form input backgrounds need to be overridden. Landing page correctly ignores toggle (no .themeable). Persistence via localStorage 'obs-theme' works across reload. All 9 admin tabs, /libro-de-reclamaciones, /terminos, /privacidad, /uso-ia pass low-contrast heuristic (0 issues). Detail view (/panel/auditoria/:id) not tested — no audits exist and creating one would consume LLM budget when analyzed; if main agent wants coverage, ask user to create a demo audit.",
+  "rca of the issue": "Root cause: dark-theme.css scopes overrides via Tailwind utility class selectors (.bg-white, .bg-slate-50, etc.). Native form elements (input, textarea, select) that don't carry an explicit background utility class fall back to the browser's user-agent stylesheet which paints them white. Repro: login as admin → Configuración tab, or Auditorías → Nueva auditoría button. Fix: add a rule targeting form elements directly, e.g. `.dark :is(.themeable, [role=\"dialog\"]) :is(input, textarea, select):not([type=checkbox]):not([type=radio]) { background-color:#0F172A; color:#F1F5F9; }`."
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Building2,
   FileText,
@@ -164,7 +165,7 @@ export default function Panel() {
     : [];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="themeable min-h-screen bg-[#F8FAFC]">
       {/* Header */}
       <header className="bg-[#020617] text-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
@@ -172,6 +173,7 @@ export default function Panel() {
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
           <div className="flex items-center gap-5">
+            <ThemeToggle onDark />
             <span className="text-sm text-slate-300 hidden sm:block" data-testid="panel-user-name">
               {user?.name}
             </span>

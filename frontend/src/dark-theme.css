@@ -1,0 +1,194 @@
+/* Modo oscuro OnBuySolutions — overrides con alcance .themeable (páginas internas) + diálogos/popovers */
+
+/* ===== Fondos ===== */
+.dark .themeable.bg-\[\#F8FAFC\],
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-\[\#F8FAFC\] {
+    background-color: #020617;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-white {
+    background-color: #0F172A;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(.bg-slate-50, .bg-slate-100) {
+    background-color: #1E293B;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(.bg-slate-50\/60, .bg-slate-50\/50) {
+    background-color: rgba(30, 41, 59, 0.6);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-slate-200 {
+    background-color: #334155;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-\[\#0F172A\] {
+    background-color: #1E293B;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-\[\#E0F2FE\] {
+    background-color: rgba(56, 189, 248, 0.15);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-sky-50 {
+    background-color: rgba(14, 165, 233, 0.1);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-sky-50\/50 {
+    background-color: rgba(14, 165, 233, 0.06);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-emerald-50 {
+    background-color: rgba(16, 185, 129, 0.12);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-amber-50 {
+    background-color: rgba(245, 158, 11, 0.12);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-red-50 {
+    background-color: rgba(239, 68, 68, 0.12);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-orange-50 {
+    background-color: rgba(249, 115, 22, 0.12);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .bg-red-100 {
+    background-color: rgba(239, 68, 68, 0.22);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .hover\:bg-slate-50:hover {
+    background-color: #1E293B;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .hover\:bg-slate-100:hover {
+    background-color: #273449;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .hover\:bg-white:hover {
+    background-color: #0F172A;
+}
+
+/* ===== Textos ===== */
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(.text-\[\#0F172A\], .text-slate-900) {
+    color: #F1F5F9;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-slate-800 {
+    color: #E2E8F0;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-slate-700 {
+    color: #CBD5E1;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-slate-600 {
+    color: #AAB8CC;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-slate-500 {
+    color: #94A3B8;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-\[\#0284C7\] {
+    color: #38BDF8;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .hover\:text-\[\#0284C7\]:hover {
+    color: #7DD3FC;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .hover\:text-\[\#0F172A\]:hover {
+    color: #F1F5F9;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-emerald-700 {
+    color: #34D399;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(.text-amber-700, .text-amber-600) {
+    color: #FBBF24;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-amber-800 {
+    color: #FCD34D;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-amber-900 {
+    color: #FDE68A;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(.text-red-700, .text-red-600) {
+    color: #F87171;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-sky-700 {
+    color: #7DD3FC;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-sky-800 {
+    color: #BAE6FD;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(.text-orange-700, .text-orange-600) {
+    color: #FB923C;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .text-orange-800 {
+    color: #FDBA74;
+}
+
+/* ===== Bordes ===== */
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(.border-slate-50, .border-slate-100, .border-slate-200) {
+    border-color: #1E293B;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-slate-300 {
+    border-color: #334155;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .hover\:border-slate-300:hover {
+    border-color: #475569;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #1E293B;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-sky-100 {
+    border-color: rgba(14, 165, 233, 0.25);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-sky-200 {
+    border-color: rgba(14, 165, 233, 0.35);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-emerald-200 {
+    border-color: rgba(16, 185, 129, 0.35);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-amber-200 {
+    border-color: rgba(245, 158, 11, 0.35);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-amber-300 {
+    border-color: rgba(245, 158, 11, 0.45);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-amber-400 {
+    border-color: rgba(245, 158, 11, 0.55);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-red-200 {
+    border-color: rgba(239, 68, 68, 0.35);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-red-300 {
+    border-color: rgba(239, 68, 68, 0.45);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-red-400 {
+    border-color: rgba(239, 68, 68, 0.6);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-orange-100 {
+    border-color: rgba(249, 115, 22, 0.25);
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) .border-orange-200 {
+    border-color: rgba(249, 115, 22, 0.35);
+}
+
+/* ===== Informe Markdown ===== */
+.dark .themeable .markdown-report h1,
+.dark .themeable .markdown-report h2 {
+    color: #F1F5F9;
+    border-bottom-color: #1E293B;
+}
+.dark .themeable .markdown-report h3 {
+    color: #38BDF8;
+}
+.dark .themeable .markdown-report p,
+.dark .themeable .markdown-report ul,
+.dark .themeable .markdown-report ol,
+.dark .themeable .markdown-report td {
+    color: #CBD5E1;
+}
+.dark .themeable .markdown-report strong {
+    color: #F1F5F9;
+}
+.dark .themeable .markdown-report th {
+    background: #1E293B;
+}
+.dark .themeable .markdown-report td {
+    border-color: #334155;
+}
+.dark .themeable .markdown-report tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* ===== Scrollbar ===== */
+.dark ::-webkit-scrollbar-track {
+    background: #0F172A;
+}
+.dark ::-webkit-scrollbar-thumb {
+    background: #334155;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}

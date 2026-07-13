@@ -4,6 +4,7 @@ import { ShieldCheck, ArrowLeft, MailCheck, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { formatApiErrorDetail } from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const inputClass =
   "mt-2 w-full bg-white border border-slate-300 focus:border-[#0284C7] outline-none px-4 py-3.5 text-sm text-[#0F172A] transition-colors";
@@ -150,7 +151,7 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="themeable min-h-screen grid lg:grid-cols-2">
       {/* Panel izquierdo */}
       <div className="hidden lg:flex flex-col justify-between bg-[#020617] text-white p-12 grain relative">
         <Link to="/" className="font-heading font-black text-xl tracking-tight" data-testid="auth-logo-link">
@@ -174,9 +175,12 @@ export default function AuthPage() {
       {/* Formulario */}
       <div className="flex items-center justify-center bg-[#F8FAFC] p-6 lg:p-12">
         <div className="w-full max-w-md">
-          <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#0284C7] transition-colors mb-10" data-testid="auth-back-link">
-            <ArrowLeft size={16} /> Volver al inicio
-          </Link>
+          <div className="flex items-center justify-between mb-10">
+            <Link to="/" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#0284C7] transition-colors" data-testid="auth-back-link">
+              <ArrowLeft size={16} /> Volver al inicio
+            </Link>
+            <ThemeToggle />
+          </div>
           {(mode === "verify" || mode === "reset") && (
             <div className="w-12 h-12 rounded-full bg-[#E0F2FE] flex items-center justify-center mb-6">
               {mode === "verify" ? (
