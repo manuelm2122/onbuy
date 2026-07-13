@@ -154,6 +154,15 @@
     border-color: rgba(249, 115, 22, 0.35);
 }
 
+/* ===== Elementos de formulario nativos (sin clase de fondo explícita) ===== */
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), textarea, select) {
+    background-color: #0F172A;
+    color: #F1F5F9;
+}
+.dark :is(.themeable, [role="dialog"], [data-radix-popper-content-wrapper]) :is(input, textarea)::placeholder {
+    color: #64748B;
+}
+
 /* ===== Informe Markdown ===== */
 .dark .themeable .markdown-report h1,
 .dark .themeable .markdown-report h2 {
