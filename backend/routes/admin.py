@@ -139,6 +139,8 @@ async def admin_get_settings(user: dict = Depends(get_current_user)):
 async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_current_user)):
     require_admin(user)
     updates = data.model_dump(exclude_none=True)
+    if updates.get("paypal_mode") not in (None, "sandbox", "live"):
+        raise HTTPException(status_code=400, detail="Modo PayPal inválido: usa 'sandbox' o 'live'")
     for key_field in ("llm_key", "resend_api_key", "paypal_secret"):
         if key_field in updates and not str(updates[key_field]).strip():
             updates.pop(key_field)
