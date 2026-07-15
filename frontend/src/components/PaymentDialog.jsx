@@ -116,7 +116,7 @@ export const PaymentDialog = ({ audit, open, onOpenChange, onPaid }) => {
             {config && quote && (
               <div data-testid="paypal-buttons-container">
                 <PayPalScriptProvider
-                  options={{ clientId: config.client_id, currency: "USD", intent: "capture" }}
+                  options={{ clientId: config.client_id, currency: "USD", intent: "capture", locale: "es_ES" }}
                 >
                   <PayPalButtons
                     forceReRender={[plan, quote.amount_usd]}

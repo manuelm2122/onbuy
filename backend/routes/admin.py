@@ -149,6 +149,37 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
     return {"message": "Configuración guardada. Los cambios se aplican de inmediato."}
 
 
+# ---------- PAYMENTS HISTORY ----------
+
+@router.get("/payments")
+async def admin_list_payments(user: dict = Depends(get_current_user)):
+    require_admin(user)
+    docs = await db.payments.find({}).sort("created_at", -1).to_list(500)
+    audit_ids = list({d["audit_id"] for d in docs})
+    audits = await db.audits.find({"_id": {"$in": [ObjectId(a) for a in audit_ids]}}).to_list(500)
+    amap = {str(a["_id"]): a for a in audits}
+    return [
+        {
+            "id": str(d["_id"]),
+            "order_id": d["order_id"],
+            "capture_id": d.get("capture_id"),
+            "audit_id": d["audit_id"],
+            "condominium_name": amap.get(d["audit_id"], {}).get("condominium_name", "—"),
+            "user_email": d.get("user_email", "—"),
+            "plan": d.get("plan"),
+            "amount_pen": d.get("amount_pen"),
+            "amount_usd": d.get("amount_usd"),
+            "exchange_rate": d.get("exchange_rate_usd_per_pen"),
+            "status": d.get("status"),
+            "paypal_mode": d.get("paypal_mode"),
+            "payer_email": d.get("payer_email"),
+            "created_at": d.get("created_at"),
+            "captured_at": d.get("captured_at"),
+        }
+        for d in docs
+    ]
+
+
 # ---------- CONTACT INBOX ----------
 
 @router.get("/contacts")

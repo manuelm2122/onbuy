@@ -92,6 +92,34 @@ const FAQS = [
       </>
     ),
   },
+  {
+    q: "¿En qué se diferencia su servicio de consultar directamente a ChatGPT, Grok u otra IA de uso general?",
+    a: (
+      <>
+        <p>
+          La diferencia está en la <b className="text-slate-200">especialización, el procesamiento de tu documentación
+          real y el resultado profesional</b>. Un chat de uso general responde en abstracto y limitado a lo que puedas
+          copiar y pegar en la conversación; nuestro sistema procesa de forma masiva y estructurada los estados de
+          cuenta, comprobantes, actas y presupuestos reales de tu condominio, cruza los datos entre sí (cuadre de
+          ingresos y egresos, gastos sin sustento, inconsistencias) y aplica motores de análisis configurados
+          específicamente con la normativa peruana aplicable a condominios y juntas de propietarios.
+        </p>
+        <p>
+          El resultado tampoco es comparable: no recibes una respuesta suelta en un chat, sino un{" "}
+          <b className="text-slate-200">informe profesional descargable en PDF</b>, con estructura de auditoría,
+          hallazgos referenciados a tu evidencia documental y recomendaciones accionables — un documento que puedes
+          presentar ante tu junta de propietarios o utilizar como medio probatorio. Además, tu caso queda guardado en
+          tu panel con su biblioteca de documentos y seguimiento multi-sesión.
+        </p>
+        <p>
+          Finalmente, detrás del servicio hay una <b className="text-slate-200">empresa peruana identificable</b>{" "}
+          (ONBUYSOLUTIONS S.A.C., RUC 20606439327) que responde por el servicio: soporte real, Libro de Reclamaciones,
+          cumplimiento de la Ley N.° 29733 de Protección de Datos Personales y de la normativa peruana de IA. Un chat
+          genérico no asume ninguna de esas responsabilidades frente a ti como consumidor.
+        </p>
+      </>
+    ),
+  },
 ];
 
 export const FaqSection = () => {
