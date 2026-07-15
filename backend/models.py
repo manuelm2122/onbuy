@@ -124,6 +124,14 @@ class SettingsInput(BaseModel):
     resend_api_key: Optional[str] = None
     resend_sender: Optional[str] = None
     complaints_notify_email: Optional[str] = None
+    paypal_client_id: Optional[str] = None
+    paypal_secret: Optional[str] = None
+    paypal_mode: Optional[str] = None
+
+
+class CreateOrderInput(BaseModel):
+    audit_id: str
+    plan: str
 
 
 class ComplaintInput(BaseModel):

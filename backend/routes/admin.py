@@ -130,6 +130,8 @@ async def admin_get_settings(user: dict = Depends(get_current_user)):
     s["llm_key_masked"] = _mask_key(llm_key)
     resend_key = s.pop("resend_api_key", "")
     s["resend_key_masked"] = _mask_key(resend_key)
+    paypal_secret = s.pop("paypal_secret", "")
+    s["paypal_secret_masked"] = _mask_key(paypal_secret)
     return s
 
 
@@ -137,7 +139,7 @@ async def admin_get_settings(user: dict = Depends(get_current_user)):
 async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_current_user)):
     require_admin(user)
     updates = data.model_dump(exclude_none=True)
-    for key_field in ("llm_key", "resend_api_key"):
+    for key_field in ("llm_key", "resend_api_key", "paypal_secret"):
         if key_field in updates and not str(updates[key_field]).strip():
             updates.pop(key_field)
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()

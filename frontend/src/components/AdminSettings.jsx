@@ -22,6 +22,7 @@ export const AdminSettings = () => {
   const [s, setS] = useState(null);
   const [llmKey, setLlmKey] = useState("");
   const [resendKey, setResendKey] = useState("");
+  const [paypalSecret, setPaypalSecret] = useState("");
   const [saving, setSaving] = useState(false);
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [changingPw, setChangingPw] = useState(false);
@@ -52,12 +53,16 @@ export const AdminSettings = () => {
       };
       if (llmKey.trim()) payload.llm_key = llmKey.trim();
       if (resendKey.trim()) payload.resend_api_key = resendKey.trim();
+      if (paypalSecret.trim()) payload.paypal_secret = paypalSecret.trim();
       payload.resend_sender = s.resend_sender;
       payload.complaints_notify_email = s.complaints_notify_email;
+      payload.paypal_client_id = s.paypal_client_id;
+      payload.paypal_mode = s.paypal_mode;
       await api.put("/admin/settings", payload);
       toast.success("Configuración guardada. Los cambios se aplican de inmediato.");
       setLlmKey("");
       setResendKey("");
+      setPaypalSecret("");
       const { data } = await api.get("/admin/settings");
       setS(data);
     } catch (err) {
@@ -208,6 +213,47 @@ export const AdminSettings = () => {
             </div>
             <Input label="Remitente (from)" field="resend_sender" value={s.resend_sender} onChange={set} hint="Debe ser de un dominio verificado en Resend. En modo prueba: onboarding@resend.dev" />
             <Input label="Email de notificación de reclamos" field="complaints_notify_email" value={s.complaints_notify_email} onChange={set} hint="Aquí recibirás cada nuevo reclamo o queja" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 p-6">
+          <div className="flex items-center gap-3">
+            <KeyRound className="text-[#0284C7]" size={22} strokeWidth={1.5} />
+            <h3 className="font-heading font-bold text-[#0F172A]">Pagos con PayPal</h3>
+          </div>
+          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+            Credenciales de tu app en developer.paypal.com. En modo <b>sandbox</b> los pagos son de prueba (sin
+            dinero real); cambia a <b>live</b> con las credenciales de producción cuando estés listo para cobrar.
+            El cobro se realiza en USD al tipo de cambio del día y la auditoría se activa automáticamente al pagar.
+          </p>
+          <div className="mt-5 grid sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <Input label="Client ID de PayPal" field="paypal_client_id" value={s.paypal_client_id} onChange={set} placeholder="Ae68…" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">Secret Key de PayPal</label>
+              <input
+                type="text"
+                value={paypalSecret}
+                onChange={(e) => setPaypalSecret(e.target.value)}
+                placeholder={s.paypal_secret_masked ? `Actual: ${s.paypal_secret_masked} — escribe aquí para reemplazarla` : "EEY5…"}
+                data-testid="settings-paypal_secret-input"
+                className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Déjalo vacío para mantener la clave actual.</p>
+            </div>
+            <div>
+              <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">Modo</label>
+              <select
+                value={s.paypal_mode || "sandbox"}
+                onChange={(e) => set("paypal_mode", e.target.value)}
+                data-testid="settings-paypal_mode-select"
+                className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors bg-white"
+              >
+                <option value="sandbox">Sandbox (pruebas)</option>
+                <option value="live">Live (producción)</option>
+              </select>
+            </div>
           </div>
         </div>
 

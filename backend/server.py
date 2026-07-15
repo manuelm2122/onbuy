@@ -13,6 +13,7 @@ from routes.audits import router as audits_router
 from routes.admin import router as admin_router
 from routes.public import router as public_router
 from routes.complaints import router as complaints_router
+from routes.payments import router as payments_router
 
 app = FastAPI(title="OnBuySolutions API")
 
@@ -22,6 +23,7 @@ api_router.include_router(audits_router)
 api_router.include_router(admin_router)
 api_router.include_router(public_router)
 api_router.include_router(complaints_router)
+api_router.include_router(payments_router)
 api_router.include_router(create_consulting_router(db, get_current_user, get_app_settings, UPLOAD_DIR))
 app.include_router(api_router)
 

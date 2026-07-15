@@ -68,6 +68,7 @@ SETTINGS_DEFAULTS = {
     "empresa_ciudad": "Lima",
     "resend_sender": "onboarding@resend.dev",
     "complaints_notify_email": "onbuysolutions@gmail.com",
+    "paypal_mode": "sandbox",
 }
 
 
@@ -80,4 +81,8 @@ async def get_app_settings() -> dict:
         merged["resend_sender"] = os.environ.get("SENDER_EMAIL", SETTINGS_DEFAULTS["resend_sender"])
     if not doc.get("complaints_notify_email"):
         merged["complaints_notify_email"] = os.environ.get("COMPLAINTS_NOTIFY_EMAIL", SETTINGS_DEFAULTS["complaints_notify_email"])
+    merged["paypal_client_id"] = doc.get("paypal_client_id") or os.environ.get("PAYPAL_CLIENT_ID", "")
+    merged["paypal_secret"] = doc.get("paypal_secret") or os.environ.get("PAYPAL_SECRET", "")
+    if not doc.get("paypal_mode"):
+        merged["paypal_mode"] = os.environ.get("PAYPAL_MODE", SETTINGS_DEFAULTS["paypal_mode"])
     return merged
