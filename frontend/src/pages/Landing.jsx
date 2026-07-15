@@ -18,6 +18,7 @@ import {
   Video,
 } from "lucide-react";
 import { toast } from "sonner";
+import { FaqSection } from "@/components/FaqSection";
 import { api, formatApiErrorDetail } from "@/lib/api";
 
 const HERO_IMG =
@@ -125,6 +126,7 @@ export default function Landing() {
             <a href="#servicios" className="hover:text-white transition-colors" data-testid="nav-link-servicios">Servicios</a>
             <a href="#consultoria" className="hover:text-white transition-colors" data-testid="nav-link-consultoria">Consultoría</a>
             <a href="#precios" className="hover:text-white transition-colors" data-testid="nav-link-precios">Precios</a>
+            <a href="#faq" className="hover:text-white transition-colors" data-testid="nav-link-faq">FAQ</a>
             <a href="#contacto" className="hover:text-white transition-colors" data-testid="nav-link-contacto">Contacto</a>
           </div>
           <Link
@@ -549,6 +551,9 @@ export default function Landing() {
           </Link>
         </div>
       </section>
+
+      {/* PREGUNTAS FRECUENTES */}
+      <FaqSection />
 
       {/* CONTACTO */}
       <section id="contacto" className="bg-[#020617] py-24 lg:py-32">

@@ -11,6 +11,14 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+:root {
+    color-scheme: light;
+}
+
+.dark {
+    color-scheme: dark;
+}
+
 code {
     font-family: 'IBM Plex Mono', Menlo, Monaco, Consolas, monospace;
 }
