@@ -131,6 +131,12 @@ export const AdminConsulting = () => {
   const [cases, setCases] = useState(null);
   const [selected, setSelected] = useState(null);
   const [payOpen, setPayOpen] = useState(false);
+  const caseLocked =
+    !isAdmin &&
+    !!selected &&
+    !selected.is_admin_case &&
+    (selected.payment_status !== "autorizada" ||
+      (selected.budget_usd != null && selected.spent_usd >= selected.budget_usd));
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -686,7 +692,7 @@ export const AdminConsulting = () => {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={sending}
+                disabled={sending || caseLocked}
                 data-testid="attach-file-btn"
                 className="shrink-0 text-slate-400 hover:text-[#0284C7] disabled:opacity-40 transition-colors p-2.5"
                 title="Adjuntar archivos (PDF, imágenes, Excel, audio, video)"
@@ -696,6 +702,7 @@ export const AdminConsulting = () => {
               <textarea
                 rows={2}
                 value={input}
+                disabled={caseLocked}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
@@ -703,13 +710,13 @@ export const AdminConsulting = () => {
                     sendMessage();
                   }
                 }}
-                placeholder="Consulta al abogado civil, penal y contador… (Enter para enviar)"
+                placeholder={caseLocked ? "Activa o recarga tu consulta para continuar…" : "Consulta al abogado civil, penal y contador… (Enter para enviar)"}
                 data-testid="case-chat-input"
-                className="flex-1 border border-slate-300 focus:border-[#0284C7] outline-none px-4 py-3 text-sm transition-colors resize-none rounded-xl"
+                className="flex-1 border border-slate-300 focus:border-[#0284C7] outline-none px-4 py-3 text-sm transition-colors resize-none rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 onClick={sendMessage}
-                disabled={sending || (!input.trim() && pendingFiles.length === 0)}
+                disabled={sending || caseLocked || (!input.trim() && pendingFiles.length === 0)}
                 data-testid="send-message-btn"
                 className="shrink-0 bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-50 text-white p-3 rounded-full transition-colors"
               >
