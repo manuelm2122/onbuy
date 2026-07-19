@@ -16,6 +16,9 @@ import {
   Scale,
   FileSignature,
   Video,
+  Gavel,
+  Calculator,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { FaqSection } from "@/components/FaqSection";
@@ -87,7 +90,7 @@ const features = [
 ];
 
 export default function Landing() {
-  const [pricing, setPricing] = useState({ price_small: 1100, price_medium: 2100 });
+  const [pricing, setPricing] = useState({ price_small: 1100, price_medium: 2100, price_consulting: 30 });
 
   useEffect(() => {
     api
@@ -318,37 +321,53 @@ export default function Landing() {
       {/* CONSULTORÍA INCLUIDA */}
       <section id="consultoria" className="bg-white py-24 lg:py-32" data-testid="section-consultoria">
         <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <div className="flex items-center gap-3 mb-4">
-            <p className="text-xs tracking-[0.3em] uppercase text-[#0284C7] font-semibold">Beneficio incluido</p>
-            <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1 rounded-full" data-testid="consultoria-free-badge">
-              Gratis con tu auditoría
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <p className="text-xs tracking-[0.3em] uppercase text-[#0284C7] font-semibold">Servicio independiente</p>
+            <span className="bg-sky-50 border border-sky-200 text-[#0284C7] text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1 rounded-full" data-testid="consultoria-price-badge">
+              S/ {Number(pricing.price_consulting).toLocaleString("es-PE")} por consulta
             </span>
           </div>
           <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-[#0F172A] max-w-3xl">
-            1 hora de consultoría legal-contable por Zoom, incluida con cualquier auditoría
+            Consultoría legal y contable con IA, cuando la necesites
           </h2>
           <p className="text-slate-600 mt-4 max-w-2xl text-sm leading-relaxed">
-            Al adquirir cualquier plan de auditoría, recibes una sesión de 1 hora por Zoom con
-            nuestro consultor. Trabajamos tu caso en un expediente digital potenciado por IA que
-            combina tres especialidades y produce entregables listos para usar.
+            No necesitas contratar una auditoría: crea tu cuenta, abre tu caso por{" "}
+            S/ {Number(pricing.price_consulting).toLocaleString("es-PE")} y trabaja de inmediato con un consultor IA
+            que combina tres especialidades — abogado civil, abogado penal y contador peruano — sobre tus documentos
+            reales. Todo queda en un expediente digital con entregables descargables en PDF.
           </p>
 
-          <div className="mt-10 grid sm:grid-cols-3 gap-6 max-w-4xl">
+          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-9 max-w-5xl">
             {[
               {
-                icon: Scale,
-                title: "Abogado civil, penal y contador",
-                desc: "Análisis integral de tu caso con el marco legal peruano: Código Civil, Código Penal, Ley 27157 y normativa SUNAT.",
+                icon: FileSearch,
+                title: "Análisis de contratos",
+                desc: "Sube tu contrato de arrendamiento, de servicios o laboral: la IA detecta cláusulas abusivas, vacíos y debilidades, y te sugiere cómo corregirlos antes de firmar.",
               },
               {
                 icon: FileSignature,
-                title: "Documentos listos para usar",
-                desc: "Cartas notariales, denuncias, contratos y requerimientos redactados durante la sesión, descargables en PDF.",
+                title: "Redacción de documentos",
+                desc: "Contratos, cartas notariales, requerimientos de pago, acuerdos de junta y reglamentos internos redactados a tu medida, listos para descargar en PDF.",
               },
               {
-                icon: FileBadge,
-                title: "Informe final del expediente",
-                desc: "Al cierre recibes un informe PDF con resumen de hechos, análisis, recomendaciones y todos los documentos emitidos.",
+                icon: Landmark,
+                title: "Denuncias y reclamos",
+                desc: "Borradores de denuncias ante Indecopi o la comisaría, y reclamos a administradoras, inmobiliarias o proveedores, con el sustento normativo correspondiente.",
+              },
+              {
+                icon: Gavel,
+                title: "Demandas y escritos judiciales",
+                desc: "Borradores de demandas de desalojo, cobro de cuotas de mantenimiento o deudas, listos para que tu abogado colegiado los revise y presente.",
+              },
+              {
+                icon: Calculator,
+                title: "Orientación contable y tributaria",
+                desc: "Cuentas y presupuestos de tu junta de propietarios, obligaciones ante SUNAT y buenas prácticas para administrar el dinero del condominio.",
+              },
+              {
+                icon: Users,
+                title: "Conflictos de condominio",
+                desc: "Morosidad, uso de áreas comunes, ruidos, mascotas u obras: qué dice la Ley 27157 y su reglamento, y cómo actuar paso a paso.",
               },
             ].map((b, i) => (
               <motion.div
@@ -410,14 +429,17 @@ export default function Landing() {
             ))}
           </div>
 
-          <div className="mt-12 bg-[#F8FAFC] border border-slate-200 p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6" data-testid="consultoria-zoom-banner">
+          <div className="mt-12 bg-[#F8FAFC] border border-slate-200 p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6" data-testid="consultoria-pricing-banner">
             <div className="flex items-start gap-4">
-              <Video className="text-[#0284C7] shrink-0" size={28} strokeWidth={1.5} />
+              <Scale className="text-[#0284C7] shrink-0" size={28} strokeWidth={1.5} />
               <div>
-                <h3 className="font-heading font-bold text-[#0F172A]">Sesión en vivo por Zoom</h3>
+                <h3 className="font-heading font-bold text-[#0F172A]">
+                  S/ {Number(pricing.price_consulting).toLocaleString("es-PE")} por consulta, con recargas al mismo precio
+                </h3>
                 <p className="text-sm text-slate-500 mt-1 max-w-xl leading-relaxed">
-                  Agenda tu hora al confirmar tu auditoría: revisamos juntos tus hallazgos, resolvemos
-                  tus dudas legales y contables, y te entregamos los documentos de tu expediente.
+                  Cada pago incluye un amplio paquete de uso de IA para tu caso. ¿Lo agotaste? Recarga por el
+                  mismo precio y continúa en el mismo expediente, con todo tu historial y documentos intactos.
+                  Paga con PayPal o tarjeta y empieza al instante.
                 </p>
               </div>
             </div>
@@ -426,7 +448,7 @@ export default function Landing() {
               data-testid="consultoria-cta"
               className="shrink-0 inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-6 py-3 rounded-full text-sm transition-colors"
             >
-              Empezar mi auditoría <ArrowRight size={16} />
+              Iniciar mi consulta <ArrowRight size={16} />
             </Link>
           </div>
         </div>
@@ -443,12 +465,21 @@ export default function Landing() {
             Un pago único por cada año de documentación procesada: estados de cuenta bancarios,
             facturas y recibos de mantenimiento.
           </p>
-          <div className="mt-14 grid md:grid-cols-2 gap-8 max-w-4xl">
+          <div className="mt-14 grid md:grid-cols-3 gap-8 max-w-6xl">
             {[
               {
                 name: "Condominio pequeño",
                 target: "Menos de 50 departamentos",
                 price: Number(pricing.price_small).toLocaleString("es-PE"),
+                unit: "por año auditado",
+                features: [
+                  "Procesamiento de 12 meses de estados bancarios y recibos",
+                  "Análisis completo con IA: duplicados, faltantes e irregularidades",
+                  "Informe PDF profesional con valor legal y código de verificación",
+                  "Hallazgos clasificados por severidad + recomendaciones",
+                ],
+                bonus: { icon: Video, text: "GRATIS: 1 hora de consultoría legal-contable por Zoom con tu auditoría.", cls: "emerald" },
+                cta: "Solicitar auditoría",
                 testid: "pricing-card-pequeno",
                 featured: false,
               },
@@ -456,8 +487,33 @@ export default function Landing() {
                 name: "Condominio mediano a grande",
                 target: "De 50 a 150 departamentos",
                 price: Number(pricing.price_medium).toLocaleString("es-PE"),
+                unit: "por año auditado",
+                features: [
+                  "Procesamiento de 12 meses de estados bancarios y recibos",
+                  "Análisis completo con IA: duplicados, faltantes e irregularidades",
+                  "Informe PDF profesional con valor legal y código de verificación",
+                  "Hallazgos clasificados por severidad + recomendaciones",
+                ],
+                bonus: { icon: Video, text: "GRATIS: 1 hora de consultoría legal-contable por Zoom con tu auditoría.", cls: "emerald" },
+                cta: "Solicitar auditoría",
                 testid: "pricing-card-mediano",
                 featured: true,
+              },
+              {
+                name: "Consultoría Legal IA",
+                target: "Por consulta, sin auditoría",
+                price: Number(pricing.price_consulting).toLocaleString("es-PE"),
+                unit: "por consulta",
+                features: [
+                  "Chat con IA: abogado civil, penal y contador peruano",
+                  "Análisis de contratos y documentos (PDF, imágenes, audio, video)",
+                  "Redacción de escritos y documentos descargables en PDF",
+                  "Informe final del expediente al cerrar tu caso",
+                ],
+                bonus: { icon: Scale, text: "Incluye un amplio paquete de uso de IA. Recarga por el mismo precio y continúa en el mismo caso.", cls: "sky" },
+                cta: "Iniciar mi consulta",
+                testid: "pricing-card-consultoria",
+                featured: false,
               },
             ].map((p, i) => (
               <motion.div
@@ -486,25 +542,26 @@ export default function Landing() {
                     <span className="text-2xl align-top text-[#0EA5E9]">S/ </span>
                     {p.price}
                   </span>
-                  <span className="text-xs text-slate-400">por año auditado</span>
+                  <span className="text-xs text-slate-400">{p.unit}</span>
                 </div>
                 <ul className="mt-8 space-y-3">
-                  {[
-                    "Procesamiento de 12 meses de estados bancarios y recibos",
-                    "Análisis completo con IA: duplicados, faltantes e irregularidades",
-                    "Informe PDF profesional con valor legal y código de verificación",
-                    "Hallazgos clasificados por severidad + recomendaciones",
-                  ].map((feat) => (
+                  {p.features.map((feat) => (
                     <li key={feat} className="flex items-start gap-3 text-sm text-slate-300">
                       <CheckCircle2 className="text-[#0EA5E9] shrink-0 mt-0.5" size={16} />
                       {feat}
                     </li>
                   ))}
                 </ul>
-                <div className="mt-6 bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 flex items-start gap-3 rounded" data-testid={`${p.testid}-consultoria-bonus`}>
-                  <Video className="text-emerald-400 shrink-0 mt-0.5" size={16} />
-                  <p className="text-xs text-emerald-300 leading-relaxed">
-                    <b>GRATIS:</b> 1 hora de consultoría legal-contable por Zoom con tu auditoría.
+                <div
+                  className={`mt-6 border px-4 py-3 flex items-start gap-3 rounded ${
+                    p.bonus.cls === "emerald" ? "bg-emerald-500/10 border-emerald-500/30" : "bg-sky-500/10 border-sky-500/30"
+                  }`}
+                  data-testid={`${p.testid}-bonus`}
+                >
+                  <p.bonus.icon className={`shrink-0 mt-0.5 ${p.bonus.cls === "emerald" ? "text-emerald-400" : "text-[#0EA5E9]"}`} size={16} />
+                  <p className={`text-xs leading-relaxed ${p.bonus.cls === "emerald" ? "text-emerald-300" : "text-sky-300"}`}>
+                    {p.bonus.cls === "emerald" ? <b>GRATIS: </b> : null}
+                    {p.bonus.text.replace("GRATIS: ", "")}
                   </p>
                 </div>
                 <Link
@@ -516,7 +573,7 @@ export default function Landing() {
                       : "border border-slate-600 hover:border-slate-300 text-slate-200"
                   }`}
                 >
-                  Solicitar auditoría <ArrowRight size={16} />
+                  {p.cta} <ArrowRight size={16} />
                 </Link>
               </motion.div>
             ))}

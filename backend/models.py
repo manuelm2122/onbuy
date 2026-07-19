@@ -127,11 +127,14 @@ class SettingsInput(BaseModel):
     paypal_client_id: Optional[str] = None
     paypal_secret: Optional[str] = None
     paypal_mode: Optional[str] = None
+    price_consulting: Optional[float] = None
+    consulting_budget_usd: Optional[float] = None
 
 
 class CreateOrderInput(BaseModel):
-    audit_id: str
-    plan: str
+    item_type: str = "audit"
+    item_id: str
+    plan: Optional[str] = None
 
 
 class ComplaintInput(BaseModel):

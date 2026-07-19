@@ -502,7 +502,7 @@ export default function AuditDetail() {
           </TabsContent>
         </Tabs>
       </main>
-      <PaymentDialog audit={audit} open={payOpen} onOpenChange={setPayOpen} onPaid={load} />
+      <PaymentDialog itemType="audit" item={audit} open={payOpen} onOpenChange={setPayOpen} onPaid={load} />
     </div>
   );
 }

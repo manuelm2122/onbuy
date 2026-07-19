@@ -43,6 +43,8 @@ export const AdminSettings = () => {
         ai_model: s.ai_model,
         price_small: parseFloat(s.price_small) || 1100,
         price_medium: parseFloat(s.price_medium) || 2100,
+        price_consulting: parseFloat(s.price_consulting) || 30,
+        consulting_budget_usd: parseFloat(s.consulting_budget_usd) || 3.5,
         contact_email: s.contact_email,
         empresa_razon_social: s.empresa_razon_social,
         empresa_ruc: s.empresa_ruc,
@@ -186,6 +188,8 @@ export const AdminSettings = () => {
             <Input label="Email de contacto" field="contact_email" value={s.contact_email} onChange={set} />
             <Input label="Precio plan pequeño (S/, <50 dptos.)" field="price_small" value={s.price_small} onChange={set} />
             <Input label="Precio plan mediano-grande (S/, 50-150)" field="price_medium" value={s.price_medium} onChange={set} />
+            <Input label="Precio consulta legal IA (S/)" field="price_consulting" value={s.price_consulting} onChange={set} hint="Precio por consulta y por cada recarga" />
+            <Input label="Uso de IA incluido por pago (USD)" field="consulting_budget_usd" value={s.consulting_budget_usd} onChange={set} hint="Presupuesto en tokens Gemini que incluye cada pago de consulta" />
           </div>
         </div>
 

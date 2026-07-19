@@ -69,6 +69,8 @@ SETTINGS_DEFAULTS = {
     "resend_sender": "onboarding@resend.dev",
     "complaints_notify_email": "onbuysolutions@gmail.com",
     "paypal_mode": "sandbox",
+    "price_consulting": 30.0,
+    "consulting_budget_usd": 3.5,
 }
 
 

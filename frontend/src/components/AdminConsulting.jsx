@@ -15,6 +15,8 @@ import {
   FolderOpen,
   FileBadge,
   X,
+  CreditCard,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -32,6 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { PaymentDialog } from "@/components/PaymentDialog";
 
 const STATUS_META = {
   activo: { label: "Activo", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -45,7 +49,7 @@ const fmtDate = (iso) =>
   new Date(iso).toLocaleString("es-PE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
 const AttachmentChip = ({ att, caseId }) => {
-  const url = `${BACKEND_URL}/api/admin/cases/${caseId}/files/${att.stored_name}`;
+  const url = `${BACKEND_URL}/api/cases/${caseId}/files/${att.stored_name}`;
   if (att.mime_type?.startsWith("image/")) {
     return (
       <a href={url} target="_blank" rel="noreferrer" data-testid={`attachment-image-${att.stored_name}`}>
@@ -122,8 +126,11 @@ const Message = ({ m, caseId, onExport, exporting }) => {
 };
 
 export const AdminConsulting = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [cases, setCases] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [payOpen, setPayOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [pendingFiles, setPendingFiles] = useState([]);
@@ -146,7 +153,7 @@ export const AdminConsulting = () => {
 
   const loadCases = useCallback(async () => {
     try {
-      const { data } = await api.get("/admin/cases");
+      const { data } = await api.get("/cases");
       setCases(data);
       return data;
     } catch {
@@ -157,7 +164,7 @@ export const AdminConsulting = () => {
 
   const openCase = useCallback(async (id) => {
     try {
-      const { data } = await api.get(`/admin/cases/${id}`);
+      const { data } = await api.get(`/cases/${id}`);
       setSelected(data.case);
       setMessages(data.messages);
     } catch {
@@ -177,7 +184,7 @@ export const AdminConsulting = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const { data } = await api.post("/admin/cases", caseForm);
+      const { data } = await api.post("/cases", caseForm);
       toast.success("Caso creado");
       setNewDialog(false);
       setCaseForm({ title: "", description: "" });
@@ -194,7 +201,7 @@ export const AdminConsulting = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const { data } = await api.put(`/admin/cases/${selected.id}`, caseForm);
+      const { data } = await api.put(`/cases/${selected.id}`, caseForm);
       setSelected(data);
       toast.success("Caso actualizado");
       setEditDialog(false);
@@ -207,7 +214,7 @@ export const AdminConsulting = () => {
   };
 
   const downloadCaseFile = async (storedName, fallbackName) => {
-    const res = await fetch(`${BACKEND_URL}/api/admin/cases/${selected.id}/files/${storedName}`, {
+    const res = await fetch(`${BACKEND_URL}/api/cases/${selected.id}/files/${storedName}`, {
       credentials: "include",
     });
     if (!res.ok) throw new Error("No se pudo descargar el archivo");
@@ -228,7 +235,7 @@ export const AdminConsulting = () => {
     setGeneratingReport(true);
     toast.info("Generando informe final del expediente… esto puede tardar un momento.");
     try {
-      const { data } = await api.post(`/admin/cases/${caseData.id}/final-report`);
+      const { data } = await api.post(`/cases/${caseData.id}/final-report`);
       await openCase(caseData.id);
       loadCases();
       await downloadCaseFile(data.stored_name, data.filename);
@@ -258,7 +265,7 @@ export const AdminConsulting = () => {
 
   const setStatus = async (status) => {
     try {
-      const { data } = await api.put(`/admin/cases/${selected.id}`, { status });
+      const { data } = await api.put(`/cases/${selected.id}`, { status });
       setSelected(data);
       loadCases();
       toast.success(`Caso marcado como ${STATUS_META[status].label.toLowerCase()}`);
@@ -274,7 +281,7 @@ export const AdminConsulting = () => {
     e?.stopPropagation();
     if (!window.confirm(`¿Eliminar el caso "${c.title}" con todo su historial y archivos? Esta acción es irreversible.`)) return;
     try {
-      const { data } = await api.delete(`/admin/cases/${c.id}`);
+      const { data } = await api.delete(`/cases/${c.id}`);
       toast.success(data.message);
       if (selected?.id === c.id) {
         setSelected(null);
@@ -302,7 +309,7 @@ export const AdminConsulting = () => {
       const fd = new FormData();
       fd.append("text", text);
       localFiles.forEach((f) => fd.append("files", f));
-      const res = await fetch(`${BACKEND_URL}/api/admin/cases/${selected.id}/chat`, {
+      const res = await fetch(`${BACKEND_URL}/api/cases/${selected.id}/chat`, {
         method: "POST",
         credentials: "include",
         body: fd,
@@ -335,7 +342,7 @@ export const AdminConsulting = () => {
     e.preventDefault();
     setGeneratingImg(true);
     try {
-      await api.post(`/admin/cases/${selected.id}/generate-image`, { prompt: imgPrompt });
+      await api.post(`/cases/${selected.id}/generate-image`, { prompt: imgPrompt });
       toast.success("Imagen generada y añadida al caso");
       setImgDialog(false);
       setImgPrompt("");
@@ -351,7 +358,7 @@ export const AdminConsulting = () => {
     setLibDialog(true);
     setLibraryDocs(null);
     try {
-      const { data } = await api.get(`/admin/cases/${selected.id}/documents`);
+      const { data } = await api.get(`/cases/${selected.id}/documents`);
       setLibraryDocs(data);
     } catch {
       toast.error("No se pudo cargar la biblioteca de documentos");
@@ -363,7 +370,7 @@ export const AdminConsulting = () => {
     const key = `${doc.message_id}-${doc.doc_index}`;
     setLibExporting(key);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/cases/${selected.id}/export-pdf`, {
+      const res = await fetch(`${BACKEND_URL}/api/cases/${selected.id}/export-pdf`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -395,7 +402,7 @@ export const AdminConsulting = () => {
   const exportPdf = async (messageId, onlyDocument = false) => {
     setExporting(messageId);
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/cases/${selected.id}/export-pdf`, {
+      const res = await fetch(`${BACKEND_URL}/api/cases/${selected.id}/export-pdf`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -477,14 +484,22 @@ export const AdminConsulting = () => {
                     <Trash2 size={13} />
                   </button>
                 </div>
-                <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                   <span className={`inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_META[c.status]?.cls || ""}`}>
                     {STATUS_META[c.status]?.label || c.status}
                   </span>
+                  {!c.is_admin_case && c.payment_status !== "autorizada" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-orange-50 text-orange-700 border-orange-200" data-testid={`case-unpaid-badge-${c.id}`}>
+                      <Lock size={9} /> Pago pendiente
+                    </span>
+                  )}
                   <span className="text-[10px] text-slate-400">
                     {c.message_count} msj · {fmtDate(c.updated_at)}
                   </span>
                 </div>
+                {isAdmin && c.owner_email && (
+                  <p className="text-[10px] text-slate-400 mt-1 truncate">{c.is_admin_case ? "Caso interno" : c.owner_email}</p>
+                )}
               </div>
             ))
           )}
@@ -564,6 +579,60 @@ export const AdminConsulting = () => {
               </button>
             </div>
           </div>
+
+          {/* Estado de pago / uso (solo clientes) */}
+          {!isAdmin && !selected.is_admin_case && selected.payment_status !== "autorizada" && (
+            <div className="bg-orange-50 border-b border-orange-100 px-5 py-4" data-testid="case-payment-banner">
+              <div className="flex items-start gap-3">
+                <Lock className="text-orange-600 shrink-0 mt-0.5" size={15} />
+                <div className="flex-1">
+                  <p className="text-xs text-orange-800 leading-relaxed">
+                    Esta consulta está <b>pendiente de pago</b>. Actívala con PayPal para chatear con el consultor
+                    IA (abogado civil, penal y contador peruano), analizar tus documentos y generar escritos en PDF.
+                  </p>
+                  <button
+                    onClick={() => setPayOpen(true)}
+                    data-testid="case-pay-btn"
+                    className="mt-2.5 inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-4 py-2 rounded-full text-xs transition-colors"
+                  >
+                    <CreditCard size={13} /> Pagar y activar consulta
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {!isAdmin && !selected.is_admin_case && selected.payment_status === "autorizada" && selected.budget_usd != null && (() => {
+            const pct = selected.budget_usd > 0 ? Math.min(100, (selected.spent_usd / selected.budget_usd) * 100) : 100;
+            const exhausted = selected.spent_usd >= selected.budget_usd;
+            return (
+              <div className={`border-b px-5 py-2.5 ${exhausted ? "bg-red-50 border-red-100" : "bg-white border-slate-200"}`} data-testid="case-usage-bar">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-[10px] font-semibold uppercase tracking-wide ${exhausted ? "text-red-600" : "text-slate-500"}`}>
+                        {exhausted ? "Límite de uso alcanzado" : `Uso de tu consulta: ${pct.toFixed(0)}%`}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${exhausted ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-[#0284C7]"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                  {(exhausted || pct > 80) && (
+                    <button
+                      onClick={() => setPayOpen(true)}
+                      data-testid="case-recharge-btn"
+                      className="shrink-0 inline-flex items-center gap-1.5 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-3.5 py-1.5 rounded-full text-[11px] transition-colors"
+                    >
+                      <CreditCard size={12} /> Recargar
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Mensajes */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4" data-testid="case-messages">
@@ -813,6 +882,19 @@ export const AdminConsulting = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {selected && !isAdmin && (
+        <PaymentDialog
+          itemType="case"
+          item={selected}
+          open={payOpen}
+          onOpenChange={setPayOpen}
+          onPaid={() => {
+            openCase(selected.id);
+            loadCases();
+          }}
+        />
+      )}
     </div>
   );
 };

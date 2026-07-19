@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 15 — Paid client-owned consulting cases + PayPal recharge fully verified. Backend: 17/17 pytest passing in /app/backend/tests/test_consulting_paid_iter15.py (client case creation with pendiente_pago/budget_usd=0/spent_usd=0/owner_email; list scoped to owner; foreign 404; chat/generate-image/final-report → 402 CASE_NOT_PAID; BUDGET_EXHAUSTED 402 with spent_usd=3.6 then restored to 0.004054; quote consulting S/30 → USD 8.83 with live FX; create-order for case pending & recharge on paid case both return real sandbox order_id; foreign case 404; invalid item_type 400/422; audit small-plan create-order regression OK; admin lists ALL cases including client's; admin case autorizada+budget_usd=null; admin chat NOT gated by 402; /api/admin/payments returns concept & item_type). Frontend: landing section-consultoria with 'S/ 30 por consulta' badge + 6 benefits + pricing banner + pricing-card-consultoria visible; client login → tab-consultoria → 'Nuevo caso' dialog creates case with case-unpaid-badge; selecting it shows orange case-payment-banner + case-pay-btn; PaymentDialog opens with no plan selector, quote S/30 → USD 8.83, PayPal SDK renders (2 iframes: PayPal + Pay Later + Tarjeta débito/crédito); paid case shows case-usage-bar (no banner); with spent_usd=3.6 UI shows red 'Límite de uso alcanzado' bar + case-recharge-btn opening PaymentDialog titled 'Recarga tu consulta'; admin sees client case + admin cases without payment banners; settings-price_consulting-input=30 and settings-consulting_budget_usd-input=3.5 present. State preserved: spent_usd restored to 0.004054; audit 'Condominio Test PayPal' unchanged.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminConsulting.jsx (usage-bar exhausted state)", "issue": "When BUDGET_EXHAUSTED, the chat textarea remains ENABLED (case-chat-input.disabled=false); user could type and get a silent 402. Suggest disabling the input while exhausted and showing tooltip 'Recarga tu consulta para continuar'.", "selector": "[data-testid=\"case-chat-input\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_consulting_paid_iter15.py", "/app/test_reports/pytest/iter15.xml"],
+  "action_items": [
+    "OPTIONAL UX: disable case-chat-input (and attach-file-btn/send-message-btn) when case is exhausted, mirroring the pendiente_pago state — currently only send-btn logic may prevent submission but the textarea remains focusable."
+  ],
+  "critical_code_review_comments": [
+    "consulting.py _serialize_case: for admin cases hard-codes payment_status='autorizada' and budget_usd=null derived from is_admin_case, but stored payment_status may differ; consider always trusting stored fields to avoid state drift for legacy cases.",
+    "routes/payments.py create-order: is_recharge is derived from case.payment_status=='autorizada' but does not check if budget is actually exhausted; a client could 'recharge' a case that still has budget left. Consider warning in UI or only allowing recharge when spent_usd >= budget_usd (or leave as-is intentionally: main agent decision).",
+    "consulting.py _require_usable BUDGET_EXHAUSTED uses spent >= budget; edge case of spent == budget triggers exhausted (correct). No off-by-one issue.",
+    "AdminConsulting.jsx (~line 605): usage bar 'exhausted' state does not disable the chat input; only visual signal + Recargar button. Low priority UX polish."
+  ],
+  "updated_files": ["/app/backend/tests/test_consulting_paid_iter15.py"],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% (all requested flows verified; E2E PayPal capture requires manual buyer sandbox)"},
+  "test_credentials": "otptest@test.com/nuevapass456 (cliente) ; admin@onbuysolutions.com/OnBuy2026!",
+  "seed_data_creation": "Test-only cases created and DELETED at teardown (TEST_iter15_*). Persisted test data used: case 6a5c91fed9399e87ed31f537 (Revisión contrato arrendamiento, budget 3.5, spent_usd restored to 0.004054), audit 6a57731f1ba8274ddfe93fd6 (pendiente_pago, unchanged). A few db.payments 'created' records for sandbox orders remain (not captured); safe to leave.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All new consulting-paid endpoints live at /api/cases/* (NOT /api/admin/cases/*). Older test_consulting.py uses stale /api/admin/cases prefix and would fail — either delete or refactor. PayPal E2E capture flow still cannot be automated (requires buyer sandbox login inside popup); consider adding a backend testing hook to mark a payment as captured to enable full E2E in future iterations."
+}

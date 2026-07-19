@@ -26,6 +26,9 @@ logger = logging.getLogger(__name__)
 
 MAX_CASE_FILE_SIZE = 50 * 1024 * 1024
 IMAGE_MODEL = "gemini-3.1-flash-image-preview"
+GEMINI_INPUT_PRICE_PER_M = 1.25
+GEMINI_OUTPUT_PRICE_PER_M = 10.0
+IMAGE_GEN_COST_USD = 0.05
 
 CASE_EXT_MIME = {
     ".pdf": "application/pdf",
@@ -240,15 +243,14 @@ def _consulting_pdf(case_title: str, content: str, case_id: str) -> bytes:
 
 
 def create_consulting_router(db, get_current_user, get_app_settings, upload_dir: Path) -> APIRouter:
-    router = APIRouter(prefix="/admin/cases")
+    router = APIRouter(prefix="/cases")
     cases_dir = upload_dir / "cases"
     cases_dir.mkdir(exist_ok=True)
 
-    def _require_admin(user: dict):
-        if user.get("role") != "admin":
-            raise HTTPException(status_code=403, detail="Solo el administrador puede acceder a Consultoría")
+    def _is_admin(user: dict) -> bool:
+        return user.get("role") == "admin"
 
-    async def _get_case(case_id: str) -> dict:
+    async def _get_case(case_id: str, user: dict) -> dict:
         try:
             oid = ObjectId(case_id)
         except Exception:
@@ -256,7 +258,34 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         case_doc = await db.cases.find_one({"_id": oid})
         if not case_doc:
             raise HTTPException(status_code=404, detail="Caso no encontrado")
+        if not _is_admin(user) and case_doc.get("user_id") != user["_id"]:
+            raise HTTPException(status_code=404, detail="Caso no encontrado")
         return case_doc
+
+    def _require_usable(case_doc: dict, user: dict):
+        if _is_admin(user):
+            return
+        if case_doc.get("payment_status") != "autorizada":
+            raise HTTPException(status_code=402, detail={
+                "msg": "Esta consulta está pendiente de pago. Actívala con PayPal para comenzar a usar la IA.",
+                "error_code": "CASE_NOT_PAID",
+            })
+        budget = case_doc.get("budget_usd") or 0.0
+        if case_doc.get("spent_usd", 0.0) >= budget:
+            raise HTTPException(status_code=402, detail={
+                "msg": "Alcanzaste el límite de uso incluido en tu pago. Recarga tu consulta para seguir trabajando en este mismo caso.",
+                "error_code": "BUDGET_EXHAUSTED",
+            })
+
+    async def _track_usage(case_id: str, cost_usd: float):
+        if cost_usd > 0:
+            await db.cases.update_one({"_id": ObjectId(case_id)}, {"$inc": {"spent_usd": round(cost_usd, 6)}})
+
+    def _stream_cost(usage) -> float:
+        try:
+            return (usage.input_tokens * GEMINI_INPUT_PRICE_PER_M + usage.output_tokens * GEMINI_OUTPUT_PRICE_PER_M) / 1_000_000
+        except Exception:
+            return 0.0
 
     def _serialize_message(m: dict) -> dict:
         return {
@@ -276,6 +305,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         cid = str(c["_id"])
         msgs = await db.case_messages.count_documents({"case_id": cid})
         files = await db.case_messages.count_documents({"case_id": cid, "attachments.0": {"$exists": True}})
+        is_admin_case = c.get("user_id") is None or c.get("owner_role") == "admin"
         return {
             "id": cid,
             "title": c["title"],
@@ -286,16 +316,27 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "message_count": msgs,
             "messages_with_files": files,
             "final_report": c.get("final_report"),
+            "payment_status": "autorizada" if is_admin_case else c.get("payment_status", "pendiente_pago"),
+            "budget_usd": None if is_admin_case else round(c.get("budget_usd", 0.0) or 0.0, 4),
+            "spent_usd": None if is_admin_case else round(c.get("spent_usd", 0.0) or 0.0, 4),
+            "owner_email": c.get("owner_email"),
+            "is_admin_case": is_admin_case,
         }
 
     @router.post("")
     async def create_case(data: CaseCreate, user: dict = Depends(get_current_user)):
-        _require_admin(user)
         now = datetime.now(timezone.utc).isoformat()
+        admin = _is_admin(user)
         doc = {
             "title": data.title.strip(),
             "description": (data.description or "").strip(),
             "status": "activo",
+            "user_id": user["_id"],
+            "owner_email": user["email"],
+            "owner_role": user.get("role", "cliente"),
+            "payment_status": "autorizada" if admin else "pendiente_pago",
+            "budget_usd": None if admin else 0.0,
+            "spent_usd": 0.0,
             "created_at": now,
             "updated_at": now,
         }
@@ -306,21 +347,19 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
     @router.get("")
     async def list_cases(user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        docs = await db.cases.find({}).sort("updated_at", -1).to_list(500)
+        query = {} if _is_admin(user) else {"user_id": user["_id"]}
+        docs = await db.cases.find(query).sort("updated_at", -1).to_list(500)
         return [await _serialize_case(c) for c in docs]
 
     @router.get("/{case_id}")
     async def get_case(case_id: str, user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        case_doc = await _get_case(case_id)
+        case_doc = await _get_case(case_id, user)
         msgs = await db.case_messages.find({"case_id": case_id}).sort("created_at", 1).to_list(1000)
         return {"case": await _serialize_case(case_doc), "messages": [_serialize_message(m) for m in msgs]}
 
     @router.put("/{case_id}")
     async def update_case(case_id: str, data: CaseUpdate, user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        await _get_case(case_id)
+        await _get_case(case_id, user)
         updates = {}
         if data.title is not None and data.title.strip():
             updates["title"] = data.title.strip()
@@ -332,12 +371,11 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             updates["status"] = data.status
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()
         await db.cases.update_one({"_id": ObjectId(case_id)}, {"$set": updates})
-        return await _serialize_case(await _get_case(case_id))
+        return await _serialize_case(await _get_case(case_id, user))
 
     @router.delete("/{case_id}")
     async def delete_case(case_id: str, user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        await _get_case(case_id)
+        await _get_case(case_id, user)
         shutil.rmtree(cases_dir / case_id, ignore_errors=True)
         deleted = await db.case_messages.delete_many({"case_id": case_id})
         await db.cases.delete_one({"_id": ObjectId(case_id)})
@@ -369,8 +407,8 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         files: List[UploadFile] = File(default=[]),
         user: dict = Depends(get_current_user),
     ):
-        _require_admin(user)
-        case_doc = await _get_case(case_id)
+        case_doc = await _get_case(case_id, user)
+        _require_usable(case_doc, user)
         if not text.strip() and not files:
             raise HTTPException(status_code=400, detail="Escribe un mensaje o adjunta un archivo")
         case_dir = cases_dir / case_id
@@ -421,6 +459,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
         async def generate():
             chunks = []
+            cost = 0.0
             try:
                 msg = UserMessage(text=prompt_text, file_contents=file_contents or None)
                 async for ev in chat.stream_message(msg):
@@ -428,6 +467,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                         chunks.append(ev.content)
                         yield ev.content
                     elif isinstance(ev, StreamDone):
+                        cost = _stream_cost(ev.usage)
                         break
                 answer = "".join(chunks)
                 await db.case_messages.insert_one({
@@ -438,6 +478,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 })
                 await db.cases.update_one({"_id": ObjectId(case_id)}, {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
+                await _track_usage(case_id, cost)
             except Exception as e:
                 logger.error(f"Error en chat de consultoría: {e}")
                 yield f"\n\n[ERROR] No se pudo completar la respuesta: {str(e)}"
@@ -450,8 +491,8 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
     @router.post("/{case_id}/generate-image")
     async def generate_case_image(case_id: str, data: ImageGenInput, user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        await _get_case(case_id)
+        case_doc = await _get_case(case_id, user)
+        _require_usable(case_doc, user)
         case_dir = cases_dir / case_id
         case_dir.mkdir(exist_ok=True)
         cfg = await get_app_settings()
@@ -493,13 +534,14 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "created_at": datetime.now(timezone.utc).isoformat(),
         })
         await db.cases.update_one({"_id": ObjectId(case_id)}, {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
+        await _track_usage(case_id, IMAGE_GEN_COST_USD)
         msg = await db.case_messages.find_one({"_id": result.inserted_id})
         return _serialize_message(msg)
 
     @router.post("/{case_id}/final-report")
     async def generate_final_report(case_id: str, user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        case_doc = await _get_case(case_id)
+        case_doc = await _get_case(case_id, user)
+        _require_usable(case_doc, user)
         msgs = await db.case_messages.find({"case_id": case_id}).sort("created_at", 1).to_list(1000)
         if not msgs:
             raise HTTPException(status_code=400, detail="El caso no tiene conversación aún; no hay expediente que informar")
@@ -533,15 +575,18 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         ).with_model("gemini", cfg["ai_model"])
 
         chunks = []
+        report_cost = 0.0
         try:
             async for ev in chat.stream_message(UserMessage(text=prompt)):
                 if isinstance(ev, TextDelta):
                     chunks.append(ev.content)
                 elif isinstance(ev, StreamDone):
+                    report_cost = _stream_cost(ev.usage)
                     break
         except Exception as e:
             logger.error(f"Error generando informe final: {e}")
             raise HTTPException(status_code=502, detail=f"No se pudo generar el informe final: {str(e)}")
+        await _track_usage(case_id, report_cost)
 
         report_md = "".join(chunks).strip()
         report_md = DOC_BLOCK_RE.sub(lambda mt: f"### {mt.group(1).strip()}\n\n{mt.group(2).strip()}", report_md)
@@ -572,7 +617,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
     @router.get("/{case_id}/files/{stored_name}")
     async def download_case_file(case_id: str, stored_name: str, user: dict = Depends(get_current_user)):
-        _require_admin(user)
+        await _get_case(case_id, user)
         if "/" in stored_name or ".." in stored_name:
             raise HTTPException(status_code=400, detail="Nombre inválido")
         path = cases_dir / case_id / stored_name
@@ -593,8 +638,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
     @router.get("/{case_id}/documents")
     async def list_case_documents(case_id: str, user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        await _get_case(case_id)
+        await _get_case(case_id, user)
         msgs = await db.case_messages.find({"case_id": case_id, "role": "assistant"}).sort("created_at", 1).to_list(1000)
         docs = []
         for m in msgs:
@@ -610,8 +654,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
     @router.post("/{case_id}/export-pdf")
     async def export_case_pdf(case_id: str, data: ExportPdfInput, user: dict = Depends(get_current_user)):
-        _require_admin(user)
-        case_doc = await _get_case(case_id)
+        case_doc = await _get_case(case_id, user)
         try:
             msg = await db.case_messages.find_one({"_id": ObjectId(data.message_id), "case_id": case_id})
         except Exception:

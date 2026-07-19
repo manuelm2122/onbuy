@@ -1,18 +1,22 @@
 import { useEffect, useState, useCallback } from "react";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { toast } from "sonner";
-import { Building2, Building } from "lucide-react";
+import { Building2, Building, Scale } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { api, formatApiErrorDetail } from "@/lib/api";
 
 const fmtPen = (v) => `S/ ${Number(v).toLocaleString("es-PE", { minimumFractionDigits: 2 })}`;
 const fmtUsd = (v) => `USD ${Number(v).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
-export const PaymentDialog = ({ audit, open, onOpenChange, onPaid }) => {
+export const PaymentDialog = ({ itemType = "audit", item, open, onOpenChange, onPaid }) => {
   const [config, setConfig] = useState(null);
   const [plan, setPlan] = useState("small");
   const [quote, setQuote] = useState(null);
   const [error, setError] = useState(null);
+
+  const isCase = itemType === "case";
+  const isRecharge = isCase && item?.payment_status === "autorizada";
+  const activePlan = isCase ? "consulting" : plan;
 
   useEffect(() => {
     if (!open) return;
@@ -27,15 +31,19 @@ export const PaymentDialog = ({ audit, open, onOpenChange, onPaid }) => {
     if (!open) return;
     setQuote(null);
     api
-      .get(`/payments/quote?plan=${plan}`)
+      .get(`/payments/quote?plan=${activePlan}`)
       .then(({ data }) => setQuote(data))
       .catch((err) => setError(formatApiErrorDetail(err.response?.data?.detail) || "No se pudo calcular el monto"));
-  }, [open, plan]);
+  }, [open, activePlan]);
 
   const createOrder = useCallback(async () => {
-    const { data } = await api.post("/payments/create-order", { audit_id: audit.id, plan });
+    const { data } = await api.post("/payments/create-order", {
+      item_type: itemType,
+      item_id: item.id,
+      plan: activePlan,
+    });
     return data.order_id;
-  }, [audit?.id, plan]);
+  }, [itemType, item?.id, activePlan]);
 
   const onApprove = useCallback(
     async (data) => {
@@ -56,47 +64,65 @@ export const PaymentDialog = ({ audit, open, onOpenChange, onPaid }) => {
     { key: "medium", icon: Building2, title: "Mediano-grande", desc: "De 50 a 150 dptos." },
   ];
 
+  const title = isCase ? (isRecharge ? "Recarga tu consulta" : "Activa tu consulta") : "Activa tu auditoría";
+  const description = isCase
+    ? isRecharge
+      ? `Recarga la consulta "${item?.title}" y sigue trabajando en el mismo caso con el consultor IA.`
+      : `Paga con PayPal y tu consulta "${item?.title}" se activará automáticamente.`
+    : `Paga con PayPal y tu auditoría de ${item?.condominium_name} se activará automáticamente.`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md" data-testid="payment-dialog">
         <DialogHeader>
-          <DialogTitle className="font-heading">Activa tu auditoría</DialogTitle>
-          <DialogDescription>
-            Paga con PayPal y tu auditoría de <b>{audit?.condominium_name}</b> se activará automáticamente.
-          </DialogDescription>
+          <DialogTitle className="font-heading">{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         {error ? (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 p-4" data-testid="payment-error">{error}</p>
         ) : (
           <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-3">
-              {plans.map((p) => {
-                const Icon = p.icon;
-                const active = plan === p.key;
-                return (
-                  <button
-                    key={p.key}
-                    type="button"
-                    onClick={() => setPlan(p.key)}
-                    data-testid={`plan-${p.key}-option`}
-                    className={`text-left p-4 border transition-colors ${
-                      active ? "border-[#0284C7] bg-sky-50" : "border-slate-200 hover:border-slate-300"
-                    }`}
-                  >
-                    <Icon size={20} className={active ? "text-[#0284C7]" : "text-slate-400"} strokeWidth={1.5} />
-                    <p className="font-heading font-bold text-sm text-[#0F172A] mt-2">{p.title}</p>
-                    <p className="text-[11px] text-slate-500">{p.desc}</p>
-                  </button>
-                );
-              })}
-            </div>
+            {!isCase && (
+              <div className="grid grid-cols-2 gap-3">
+                {plans.map((p) => {
+                  const Icon = p.icon;
+                  const active = plan === p.key;
+                  return (
+                    <button
+                      key={p.key}
+                      type="button"
+                      onClick={() => setPlan(p.key)}
+                      data-testid={`plan-${p.key}-option`}
+                      className={`text-left p-4 border transition-colors ${
+                        active ? "border-[#0284C7] bg-sky-50" : "border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      <Icon size={20} className={active ? "text-[#0284C7]" : "text-slate-400"} strokeWidth={1.5} />
+                      <p className="font-heading font-bold text-sm text-[#0F172A] mt-2">{p.title}</p>
+                      <p className="text-[11px] text-slate-500">{p.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {isCase && (
+              <div className="flex items-start gap-3 bg-sky-50 border border-sky-200 p-4">
+                <Scale size={18} className="text-[#0284C7] shrink-0 mt-0.5" strokeWidth={1.5} />
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  {isRecharge
+                    ? "Tu recarga añade un nuevo paquete de uso de IA a este mismo caso: todo el historial y los documentos se conservan."
+                    : "Tu pago incluye un paquete de uso de IA para este caso: análisis de documentos, redacción de escritos, imágenes e informe final en PDF. Si lo agotas, puedes recargar por el mismo precio y continuar donde quedaste."}
+                </p>
+              </div>
+            )}
 
             <div className="bg-slate-50 border border-slate-200 p-4 text-sm" data-testid="payment-quote">
               {quote ? (
                 <>
                   <div className="flex justify-between text-slate-600">
-                    <span>Precio del plan</span>
+                    <span>{isCase ? (isRecharge ? "Recarga de consulta" : "Consulta legal-contable IA") : "Precio del plan"}</span>
                     <span className="font-semibold text-[#0F172A]">{fmtPen(quote.amount_pen)}</span>
                   </div>
                   <div className="flex justify-between text-slate-600 mt-1.5">
@@ -119,7 +145,7 @@ export const PaymentDialog = ({ audit, open, onOpenChange, onPaid }) => {
                   options={{ clientId: config.client_id, currency: "USD", intent: "capture", locale: "es_ES" }}
                 >
                   <PayPalButtons
-                    forceReRender={[plan, quote.amount_usd]}
+                    forceReRender={[activePlan, quote.amount_usd]}
                     style={{ layout: "vertical", shape: "pill", label: "pay" }}
                     createOrder={createOrder}
                     onApprove={onApprove}
@@ -131,8 +157,9 @@ export const PaymentDialog = ({ audit, open, onOpenChange, onPaid }) => {
 
             <p className="text-[11px] text-slate-400 leading-relaxed">
               El cobro se procesa en dólares americanos (USD) con el tipo de cambio del día. Al completarse el
-              pago, la auditoría se activa de inmediato (1 auditoría por pago) y recibirás la confirmación por
-              correo. {config?.mode === "sandbox" && <b className="text-amber-600">Modo de prueba (sandbox) activo.</b>}
+              pago, {isCase ? "tu consulta se activa o recarga de inmediato" : "la auditoría se activa de inmediato (1 auditoría por pago)"} y
+              recibirás la confirmación por correo.{" "}
+              {config?.mode === "sandbox" && <b className="text-amber-600">Modo de prueba (sandbox) activo.</b>}
             </p>
           </div>
         )}

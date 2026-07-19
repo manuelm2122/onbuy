@@ -296,11 +296,9 @@ export default function Panel() {
                 Documentos
               </TabsTrigger>
             )}
-            {user?.role === "admin" && (
-              <TabsTrigger value="consultoria" data-testid="tab-consultoria-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
-                Consultoría
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="consultoria" data-testid="tab-consultoria" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+              Consultoría
+            </TabsTrigger>
             {user?.role === "admin" && (
               <TabsTrigger value="clientes" data-testid="tab-clientes-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
                 Clientes
@@ -487,11 +485,9 @@ export default function Panel() {
               <AdminDocGenerator />
             </TabsContent>
           )}
-          {user?.role === "admin" && (
-            <TabsContent value="consultoria" className="mt-8">
-              <AdminConsulting />
-            </TabsContent>
-          )}
+          <TabsContent value="consultoria" className="mt-8">
+            <AdminConsulting />
+          </TabsContent>
           {user?.role === "admin" && (
             <TabsContent value="clientes" className="mt-8">
               <AdminUsers />

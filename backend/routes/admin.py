@@ -155,16 +155,25 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
 async def admin_list_payments(user: dict = Depends(get_current_user)):
     require_admin(user)
     docs = await db.payments.find({}).sort("created_at", -1).to_list(500)
-    audit_ids = list({d["audit_id"] for d in docs})
-    audits = await db.audits.find({"_id": {"$in": [ObjectId(a) for a in audit_ids]}}).to_list(500)
+    audit_ids = [d.get("item_id") or d.get("audit_id") for d in docs if d.get("item_type", "audit") == "audit"]
+    audits = await db.audits.find({"_id": {"$in": [ObjectId(a) for a in set(audit_ids)]}}).to_list(500)
     amap = {str(a["_id"]): a for a in audits}
-    return [
-        {
+    out = []
+    for d in docs:
+        item_type = d.get("item_type", "audit")
+        item_id = d.get("item_id") or d.get("audit_id")
+        if item_type == "case":
+            concept = d.get("concept", "Consulta")
+        else:
+            concept = d.get("concept") or amap.get(item_id, {}).get("condominium_name", "—")
+        out.append({
             "id": str(d["_id"]),
             "order_id": d["order_id"],
             "capture_id": d.get("capture_id"),
-            "audit_id": d["audit_id"],
-            "condominium_name": amap.get(d["audit_id"], {}).get("condominium_name", "—"),
+            "item_type": item_type,
+            "item_id": item_id,
+            "concept": concept,
+            "is_recharge": d.get("is_recharge", False),
             "user_email": d.get("user_email", "—"),
             "plan": d.get("plan"),
             "amount_pen": d.get("amount_pen"),
@@ -175,9 +184,8 @@ async def admin_list_payments(user: dict = Depends(get_current_user)):
             "payer_email": d.get("payer_email"),
             "created_at": d.get("created_at"),
             "captured_at": d.get("captured_at"),
-        }
-        for d in docs
-    ]
+        })
+    return out
 
 
 # ---------- CONTACT INBOX ----------

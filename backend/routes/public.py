@@ -49,6 +49,7 @@ async def public_settings():
     return {
         "price_small": s["price_small"],
         "price_medium": s["price_medium"],
+        "price_consulting": s["price_consulting"],
         "contact_email": s["contact_email"],
     }
 

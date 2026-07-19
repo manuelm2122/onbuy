@@ -13,7 +13,11 @@ from email_service import send_email
 router = APIRouter(prefix="/payments")
 
 RATE_CACHE_HOURS = 6
-PLAN_LABELS = {"small": "Condominio pequeño (menos de 50 dptos.)", "medium": "Condominio mediano-grande (50 a 150 dptos.)"}
+PLAN_LABELS = {
+    "small": "Condominio pequeño (menos de 50 dptos.)",
+    "medium": "Condominio mediano-grande (50 a 150 dptos.)",
+    "consulting": "Consulta legal-contable con IA",
+}
 
 
 def _paypal_base(mode: str) -> str:
@@ -58,6 +62,8 @@ async def get_pen_usd_rate() -> float:
 
 
 def _plan_amount_pen(cfg: dict, plan: str) -> float:
+    if plan == "consulting":
+        return float(cfg["price_consulting"])
     return float(cfg["price_small"] if plan == "small" else cfg["price_medium"])
 
 
@@ -88,25 +94,43 @@ async def payment_quote(plan: str, user: dict = Depends(get_current_user)):
 
 @router.post("/create-order")
 async def create_order(data: CreateOrderInput, user: dict = Depends(get_current_user)):
-    if data.plan not in PLAN_LABELS:
-        raise HTTPException(status_code=400, detail="Plan inválido")
-    audit = await db.audits.find_one({"_id": ObjectId(data.audit_id), "user_id": user["_id"]})
-    if not audit:
-        raise HTTPException(status_code=404, detail="Auditoría no encontrada")
-    if audit.get("payment_status") == "autorizada":
-        raise HTTPException(status_code=400, detail="Esta auditoría ya está activada. No es necesario pagar de nuevo.")
-
     cfg = await get_app_settings()
+    is_recharge = False
+
+    if data.item_type == "audit":
+        if data.plan not in ("small", "medium"):
+            raise HTTPException(status_code=400, detail="Plan inválido")
+        plan = data.plan
+        audit = await db.audits.find_one({"_id": ObjectId(data.item_id), "user_id": user["_id"]})
+        if not audit:
+            raise HTTPException(status_code=404, detail="Auditoría no encontrada")
+        if audit.get("payment_status") == "autorizada":
+            raise HTTPException(status_code=400, detail="Esta auditoría ya está activada. No es necesario pagar de nuevo.")
+        description = f"Auditoría IA — {audit['condominium_name']} ({audit['period']})"
+        concept = audit["condominium_name"]
+    elif data.item_type == "case":
+        plan = "consulting"
+        case = await db.cases.find_one({"_id": ObjectId(data.item_id), "user_id": user["_id"]})
+        if not case:
+            raise HTTPException(status_code=404, detail="Consulta no encontrada")
+        if user.get("role") == "admin":
+            raise HTTPException(status_code=400, detail="Los casos del administrador no requieren pago")
+        is_recharge = case.get("payment_status") == "autorizada"
+        description = f"Consultoría legal IA — {case['title']}" + (" (recarga)" if is_recharge else "")
+        concept = case["title"]
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de compra inválido")
+
     rate = await get_pen_usd_rate()
-    amount_pen = _plan_amount_pen(cfg, data.plan)
+    amount_pen = _plan_amount_pen(cfg, plan)
     amount_usd = round(amount_pen * rate, 2)
 
     token = await _paypal_token(cfg)
     body = {
         "intent": "CAPTURE",
         "purchase_units": [{
-            "reference_id": data.audit_id,
-            "description": f"Auditoría IA — {audit['condominium_name']} ({audit['period']})"[:127],
+            "reference_id": data.item_id,
+            "description": description[:127],
             "amount": {"currency_code": "USD", "value": f"{amount_usd:.2f}"},
         }],
     }
@@ -123,10 +147,13 @@ async def create_order(data: CreateOrderInput, user: dict = Depends(get_current_
 
     await db.payments.insert_one({
         "order_id": order["id"],
-        "audit_id": data.audit_id,
+        "item_type": data.item_type,
+        "item_id": data.item_id,
+        "concept": concept,
+        "is_recharge": is_recharge,
         "user_id": user["_id"],
         "user_email": user["email"],
-        "plan": data.plan,
+        "plan": plan,
         "amount_pen": amount_pen,
         "exchange_rate_usd_per_pen": rate,
         "amount_usd": amount_usd,
@@ -138,23 +165,20 @@ async def create_order(data: CreateOrderInput, user: dict = Depends(get_current_
     return {"order_id": order["id"], "amount_usd": amount_usd, "amount_pen": amount_pen}
 
 
-def _payment_email_html(name: str, audit: dict, pay: dict, capture_id: str) -> str:
+def _payment_email_html(name: str, concept_rows: str, pay: dict, capture_id: str, intro: str) -> str:
     from routes.auth import _email_shell
     return _email_shell(f"""
-        <h2 style="color:#0F172A; font-size:17px; margin:0 0 12px;">¡Pago confirmado! Tu auditoría está activada</h2>
+        <h2 style="color:#0F172A; font-size:17px; margin:0 0 12px;">¡Pago confirmado!</h2>
         <p style="color:#334155; font-size:13px; line-height:1.6; margin:0 0 16px;">
-          Hola <b>{name}</b>: recibimos tu pago vía PayPal y tu auditoría quedó <b>activada automáticamente</b>.
-          Ya puedes ejecutar el análisis con IA desde tu panel.
+          Hola <b>{name}</b>: {intro}
         </p>
         <table cellpadding="6" cellspacing="0" style="font-size:13px; color:#334155; border:1px solid #E2E8F0; width:100%;">
-          <tr style="background:#F8FAFC;"><td><b>Condominio</b></td><td>{audit['condominium_name']}</td></tr>
-          <tr><td><b>Período</b></td><td>{audit['period']}</td></tr>
-          <tr style="background:#F8FAFC;"><td><b>Plan</b></td><td>{PLAN_LABELS.get(pay['plan'], pay['plan'])}</td></tr>
+          {concept_rows}
           <tr><td><b>Monto</b></td><td>USD {pay['amount_usd']:.2f} (S/ {pay['amount_pen']:.2f})</td></tr>
           <tr style="background:#F8FAFC;"><td><b>ID de transacción</b></td><td style="font-family:monospace; font-size:11px;">{capture_id}</td></tr>
         </table>
         <p style="margin:20px 0 0;">
-          <a href="https://www.onbuysolutions.com/panel" style="background:#0284C7; color:#ffffff; text-decoration:none; padding:12px 28px; border-radius:999px; font-size:13px; font-weight:bold;">Ir a mi auditoría</a>
+          <a href="https://www.onbuysolutions.com/panel" style="background:#0284C7; color:#ffffff; text-decoration:none; padding:12px 28px; border-radius:999px; font-size:13px; font-weight:bold;">Ir a mi panel</a>
         </p>""")
 
 
@@ -194,22 +218,57 @@ async def capture_order(order_id: str, background_tasks: BackgroundTasks, user: 
         {"_id": pay["_id"]},
         {"$set": {"status": "completed", "capture_id": capture_id, "payer_email": payer_email, "captured_at": now}},
     )
+
+    item_type = pay.get("item_type", "audit")
+    item_id = pay.get("item_id") or pay.get("audit_id")
+
+    if item_type == "case":
+        budget_added = float(cfg["consulting_budget_usd"])
+        await db.cases.update_one(
+            {"_id": ObjectId(item_id)},
+            {"$set": {"payment_status": "autorizada", "updated_at": now},
+             "$inc": {"budget_usd": budget_added}},
+        )
+        logger.info(f"Pago PayPal completado: {capture_id} — consulta {item_id} {'recargada' if pay.get('is_recharge') else 'activada'}")
+        case = await db.cases.find_one({"_id": ObjectId(item_id)})
+        if case:
+            intro = (
+                "recibimos tu pago vía PayPal y tu consulta fue <b>recargada</b>: ya puedes seguir trabajando en el mismo caso."
+                if pay.get("is_recharge")
+                else "recibimos tu pago vía PayPal y tu consulta legal-contable quedó <b>activada automáticamente</b>. Ya puedes chatear con el consultor IA desde tu panel."
+            )
+            rows = f'<tr style="background:#F8FAFC;"><td><b>Consulta</b></td><td>{case["title"]}</td></tr>'
+            background_tasks.add_task(
+                send_email,
+                user["email"],
+                f"Pago confirmado — Consulta '{case['title']}' {'recargada' if pay.get('is_recharge') else 'activada'}",
+                _payment_email_html(user.get("name", ""), rows, pay, capture_id, intro),
+            )
+        msg = "¡Pago exitoso! Tu consulta fue recargada." if pay.get("is_recharge") else "¡Pago exitoso! Tu consulta fue activada automáticamente."
+        return {"message": msg, "capture_id": capture_id}
+
     await db.audits.update_one(
-        {"_id": ObjectId(pay["audit_id"])},
+        {"_id": ObjectId(item_id)},
         {"$set": {
             "payment_status": "autorizada",
             "authorized_at": now,
             "authorized_by": f"PayPal ({capture_id})",
         }},
     )
-    logger.info(f"Pago PayPal completado: {capture_id} — auditoría {pay['audit_id']} activada")
+    logger.info(f"Pago PayPal completado: {capture_id} — auditoría {item_id} activada")
 
-    audit = await db.audits.find_one({"_id": ObjectId(pay["audit_id"])})
+    audit = await db.audits.find_one({"_id": ObjectId(item_id)})
     if audit:
+        intro = "recibimos tu pago vía PayPal y tu auditoría quedó <b>activada automáticamente</b>. Ya puedes ejecutar el análisis con IA desde tu panel."
+        rows = (
+            f'<tr style="background:#F8FAFC;"><td><b>Condominio</b></td><td>{audit["condominium_name"]}</td></tr>'
+            f'<tr><td><b>Período</b></td><td>{audit["period"]}</td></tr>'
+            f'<tr style="background:#F8FAFC;"><td><b>Plan</b></td><td>{PLAN_LABELS.get(pay["plan"], pay["plan"])}</td></tr>'
+        )
         background_tasks.add_task(
             send_email,
             user["email"],
             f"Pago confirmado — Auditoría {audit['condominium_name']} activada",
-            _payment_email_html(user.get("name", ""), audit, pay, capture_id),
+            _payment_email_html(user.get("name", ""), rows, pay, capture_id, intro),
         )
     return {"message": "¡Pago exitoso! Tu auditoría fue activada automáticamente.", "capture_id": capture_id}
