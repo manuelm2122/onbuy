@@ -22,6 +22,7 @@ export const AdminSettings = () => {
   const [s, setS] = useState(null);
   const [llmKey, setLlmKey] = useState("");
   const [googleKey, setGoogleKey] = useState("");
+  const [vertexJson, setVertexJson] = useState("");
   const [resendKey, setResendKey] = useState("");
   const [paypalSecret, setPaypalSecret] = useState("");
   const [saving, setSaving] = useState(false);
@@ -57,6 +58,9 @@ export const AdminSettings = () => {
       payload.llm_provider = s.llm_provider || "emergent";
       if (llmKey.trim()) payload.llm_key = llmKey.trim();
       if (googleKey.trim()) payload.google_api_key = googleKey.trim();
+      if (vertexJson.trim()) payload.vertex_service_account_json = vertexJson.trim();
+      if (s.vertex_project) payload.vertex_project = s.vertex_project;
+      if (s.vertex_location) payload.vertex_location = s.vertex_location;
       if (resendKey.trim()) payload.resend_api_key = resendKey.trim();
       if (paypalSecret.trim()) payload.paypal_secret = paypalSecret.trim();
       payload.resend_sender = s.resend_sender;
@@ -67,6 +71,7 @@ export const AdminSettings = () => {
       toast.success("Configuración guardada. Los cambios se aplican de inmediato.");
       setLlmKey("");
       setGoogleKey("");
+      setVertexJson("");
       setResendKey("");
       setPaypalSecret("");
       const { data } = await api.get("/admin/settings");
@@ -184,9 +189,10 @@ export const AdminSettings = () => {
               >
                 <option value="emergent">Emergent Universal Key (por defecto)</option>
                 <option value="google">Google Gemini — API Key propia</option>
+                <option value="vertex">Google Vertex AI — cuenta de servicio (JSON)</option>
               </select>
               <p className="text-[10px] text-slate-400 mt-1">
-                Con "Google Gemini" la plataforma llama directamente a la API de Google con tu propia clave (aistudio.google.com), sin pasar por la Universal Key de Emergent.
+                Con "Google Gemini" usas tu API Key de aistudio.google.com. Con "Vertex AI" usas una cuenta de servicio de Google Cloud (archivo JSON) — ideal si tu organización no permite crear API keys.
               </p>
             </div>
             <div className="sm:col-span-2">
@@ -217,6 +223,30 @@ export const AdminSettings = () => {
                 Obtén tu clave en aistudio.google.com → "Get API key". Solo se usa si el proveedor activo es "Google Gemini".
               </p>
             </div>
+            {(s.llm_provider === "vertex" || s.vertex_json_saved) && (
+              <>
+                <div className="sm:col-span-2">
+                  <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">JSON de la cuenta de servicio (Vertex AI)</label>
+                  <textarea
+                    rows={5}
+                    value={vertexJson}
+                    onChange={(e) => setVertexJson(e.target.value)}
+                    placeholder={
+                      s.vertex_json_saved
+                        ? `Guardado: ${s.vertex_client_email || "cuenta de servicio configurada"} — pega aquí un nuevo JSON para reemplazarlo`
+                        : '{"type": "service_account", "project_id": "...", "private_key": "...", "client_email": "..."}'
+                    }
+                    data-testid="settings-vertex_service_account_json-input"
+                    className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-xs transition-colors font-mono resize-y bg-white"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Pega el contenido COMPLETO del archivo .json descargado de Google Cloud (IAM → Cuentas de servicio → Claves → Crear clave JSON). La cuenta necesita el rol "Usuario de Vertex AI" y la API de Vertex AI habilitada en el proyecto.
+                  </p>
+                </div>
+                <Input label="Project ID de Google Cloud" field="vertex_project" value={s.vertex_project} onChange={set} placeholder="mi-proyecto-123456" hint="Se autocompleta desde el JSON si lo dejas vacío" />
+                <Input label="Región de Vertex AI" field="vertex_location" value={s.vertex_location} onChange={set} placeholder="us-central1" hint="Ej.: us-central1, southamerica-east1" />
+              </>
+            )}
             <Input label="Modelo de IA" field="ai_model" value={s.ai_model} onChange={set} hint="Ej.: gemini-3.1-pro-preview" />
             <Input label="Email de contacto" field="contact_email" value={s.contact_email} onChange={set} />
             <Input label="Precio plan pequeño (S/, <50 dptos.)" field="price_small" value={s.price_small} onChange={set} />

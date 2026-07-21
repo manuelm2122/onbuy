@@ -1,3 +1,4 @@
+import json
 import shutil
 from io import BytesIO
 from pathlib import Path
@@ -134,6 +135,14 @@ async def admin_get_settings(user: dict = Depends(get_current_user)):
     s["paypal_secret_masked"] = _mask_key(paypal_secret)
     google_key = s.pop("google_api_key", "")
     s["google_key_masked"] = _mask_key(google_key)
+    vertex_json = s.pop("vertex_service_account_json", "")
+    s["vertex_json_saved"] = bool(vertex_json)
+    s["vertex_client_email"] = ""
+    if vertex_json:
+        try:
+            s["vertex_client_email"] = json.loads(vertex_json).get("client_email", "")
+        except ValueError:
+            pass
     s.pop("active_llm_key", None)
     return s
 
@@ -144,12 +153,30 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
     updates = data.model_dump(exclude_none=True)
     if updates.get("paypal_mode") not in (None, "sandbox", "live"):
         raise HTTPException(status_code=400, detail="Modo PayPal inválido: usa 'sandbox' o 'live'")
-    if updates.get("llm_provider") not in (None, "emergent", "google"):
-        raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'emergent' o 'google'")
+    if updates.get("llm_provider") not in (None, "emergent", "google", "vertex"):
+        raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'emergent', 'google' o 'vertex'")
+    if "vertex_service_account_json" in updates:
+        raw = str(updates["vertex_service_account_json"]).strip()
+        if not raw:
+            updates.pop("vertex_service_account_json")
+        else:
+            try:
+                parsed = json.loads(raw)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="El JSON de la cuenta de servicio no es válido. Pega el contenido completo del archivo descargado de Google Cloud.")
+            if not parsed.get("client_email") or not parsed.get("private_key"):
+                raise HTTPException(status_code=400, detail="El JSON no parece una clave de cuenta de servicio: debe contener 'client_email' y 'private_key'")
+            updates["vertex_service_account_json"] = raw
+            if not updates.get("vertex_project") and parsed.get("project_id"):
+                updates["vertex_project"] = parsed["project_id"]
     if updates.get("llm_provider") == "google":
         current = await get_app_settings()
         if not updates.get("google_api_key") and not current.get("google_api_key"):
             raise HTTPException(status_code=400, detail="Configura primero tu API Key de Google antes de activarla como proveedor")
+    if updates.get("llm_provider") == "vertex":
+        current = await get_app_settings()
+        if not updates.get("vertex_service_account_json") and not current.get("vertex_service_account_json"):
+            raise HTTPException(status_code=400, detail="Pega primero el JSON de la cuenta de servicio de Google Cloud antes de activar Vertex AI")
     for key_field in ("llm_key", "resend_api_key", "paypal_secret", "google_api_key"):
         if key_field in updates and not str(updates[key_field]).strip():
             updates.pop(key_field)

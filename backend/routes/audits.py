@@ -15,7 +15,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, Strea
 from core import db, logger, get_app_settings, UPLOAD_DIR, SAMPLES_DIR, SAMPLE_META, MAX_FILE_SIZE, EXT_MIME, CATEGORY_LABELS
 from models import Audit, AuditCreate, DocumentOut
 from security import get_current_user
-from ai_engine import AUDIT_SYSTEM_PROMPT, prepare_file_contents, classify_uploaded_documents
+from ai_engine import AUDIT_SYSTEM_PROMPT, prepare_file_contents, classify_uploaded_documents, build_chat
 from pdf_report import build_audit_pdf
 
 router = APIRouter()
@@ -173,11 +173,11 @@ DOCUMENTOS ADJUNTOS ({len(docs)}):
 Genera el informe completo siguiendo la estructura exacta indicada."""
 
     cfg = await get_app_settings()
-    chat = LlmChat(
-        api_key=cfg["llm_key"],
+    chat = build_chat(
+        cfg,
         session_id=f"audit-{audit_id}-{uuid.uuid4().hex[:8]}",
         system_message=AUDIT_SYSTEM_PROMPT,
-    ).with_model("gemini", cfg["ai_model"])
+    )
 
     await db.audits.update_one({"_id": ObjectId(audit_id)}, {"$set": {"status": "analizando"}})
 

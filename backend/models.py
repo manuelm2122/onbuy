@@ -131,6 +131,9 @@ class SettingsInput(BaseModel):
     consulting_budget_usd: Optional[float] = None
     google_api_key: Optional[str] = None
     llm_provider: Optional[str] = None
+    vertex_service_account_json: Optional[str] = None
+    vertex_project: Optional[str] = None
+    vertex_location: Optional[str] = None
 
 
 class CreateOrderInput(BaseModel):

@@ -72,6 +72,7 @@ SETTINGS_DEFAULTS = {
     "price_consulting": 30.0,
     "consulting_budget_usd": 3.5,
     "llm_provider": "emergent",
+    "vertex_location": "us-central1",
 }
 
 
@@ -89,8 +90,12 @@ async def get_app_settings() -> dict:
     if not doc.get("paypal_mode"):
         merged["paypal_mode"] = os.environ.get("PAYPAL_MODE", SETTINGS_DEFAULTS["paypal_mode"])
     merged["google_api_key"] = doc.get("google_api_key") or os.environ.get("GOOGLE_API_KEY", "")
+    merged.setdefault("vertex_service_account_json", "")
+    merged.setdefault("vertex_project", "")
     if merged.get("llm_provider") == "google" and merged["google_api_key"]:
         merged["active_llm_key"] = merged["google_api_key"]
+    elif merged.get("llm_provider") == "vertex" and merged["vertex_service_account_json"]:
+        merged["active_llm_key"] = "vertex-service-account"
     else:
         merged["active_llm_key"] = merged["llm_key"]
     return merged

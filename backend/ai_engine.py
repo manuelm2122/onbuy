@@ -12,6 +12,24 @@ from core import db, get_app_settings, logger
 
 VALID_CATEGORIES = {"factura", "estado_cuenta", "recibo", "contrato", "libro_actas", "presupuesto", "otro"}
 
+
+def build_chat(cfg: dict, session_id: str, system_message: str, initial_messages=None, model: str = None) -> LlmChat:
+    chat = LlmChat(
+        api_key=cfg["active_llm_key"],
+        session_id=session_id,
+        system_message=system_message,
+        initial_messages=initial_messages,
+    )
+    if cfg.get("llm_provider") == "vertex" and cfg.get("vertex_service_account_json"):
+        chat.with_model("vertex_ai", model or cfg["ai_model"]).with_params(
+            vertex_credentials=cfg["vertex_service_account_json"],
+            vertex_project=cfg.get("vertex_project") or None,
+            vertex_location=cfg.get("vertex_location") or "us-central1",
+        )
+    else:
+        chat.with_model("gemini", model or cfg["ai_model"])
+    return chat
+
 AUDIT_SYSTEM_PROMPT = """Eres un auditor financiero senior colegiado, especializado en auditorías de condominios, edificios multifamiliares y juntas de propietarios en el Perú. Dominas el marco legal peruano aplicable: Ley N° 27157 (Ley de Regularización de Edificaciones, Propiedad Exclusiva y Propiedad Común), su Reglamento (TUO aprobado por D.S. N° 035-2006-VIVIENDA), el Código Civil peruano, las Normas Internacionales de Auditoría (NIA) y las buenas prácticas contables aplicables a juntas de propietarios.
 
 Tu tarea es realizar una auditoría exhaustiva y profesional de los documentos financieros proporcionados (facturas, estados de cuenta bancarios, recibos, presupuestos, actas, contratos, etc.).
@@ -99,11 +117,11 @@ async def classify_uploaded_documents(doc_ids: List[str]):
             "sin texto adicional ni bloques de código."
         )
         cfg = await get_app_settings()
-        chat = LlmChat(
-            api_key=cfg["active_llm_key"],
+        chat = build_chat(
+            cfg,
             session_id=f"classify-{uuid.uuid4().hex[:8]}",
             system_message="Eres un clasificador de documentos financieros de condominios en Perú. Respondes únicamente JSON válido.",
-        ).with_model("gemini", cfg["ai_model"])
+        )
         chunks = []
         async for ev in chat.stream_message(UserMessage(text=prompt, file_contents=file_contents)):
             if isinstance(ev, TextDelta):
