@@ -451,7 +451,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
         cfg = await get_app_settings()
         chat = LlmChat(
-            api_key=cfg["llm_key"],
+            api_key=cfg["active_llm_key"],
             session_id=f"case-{case_id}",
             system_message=CONSULTING_SYSTEM_PROMPT,
             initial_messages=history,
@@ -504,7 +504,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         case_dir.mkdir(exist_ok=True)
         cfg = await get_app_settings()
         chat = LlmChat(
-            api_key=cfg["llm_key"],
+            api_key=cfg["active_llm_key"],
             session_id=f"caseimg-{case_id}-{uuid.uuid4().hex[:8]}",
             system_message="Eres un generador de imágenes profesionales para consultoría legal y contable en Perú.",
         ).with_model("gemini", IMAGE_MODEL).with_params(modalities=["image", "text"])
@@ -575,7 +575,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
 
         cfg = await get_app_settings()
         chat = LlmChat(
-            api_key=cfg["llm_key"],
+            api_key=cfg["active_llm_key"],
             session_id=f"final-{case_id}-{uuid.uuid4().hex[:8]}",
             system_message=CONSULTING_SYSTEM_PROMPT,
             initial_messages=history,

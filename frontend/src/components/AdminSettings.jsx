@@ -21,6 +21,7 @@ const Input = ({ label, field, value, onChange, type = "text", placeholder, hint
 export const AdminSettings = () => {
   const [s, setS] = useState(null);
   const [llmKey, setLlmKey] = useState("");
+  const [googleKey, setGoogleKey] = useState("");
   const [resendKey, setResendKey] = useState("");
   const [paypalSecret, setPaypalSecret] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,7 +54,9 @@ export const AdminSettings = () => {
         empresa_direccion: s.empresa_direccion,
         empresa_ciudad: s.empresa_ciudad,
       };
+      payload.llm_provider = s.llm_provider || "emergent";
       if (llmKey.trim()) payload.llm_key = llmKey.trim();
+      if (googleKey.trim()) payload.google_api_key = googleKey.trim();
       if (resendKey.trim()) payload.resend_api_key = resendKey.trim();
       if (paypalSecret.trim()) payload.paypal_secret = paypalSecret.trim();
       payload.resend_sender = s.resend_sender;
@@ -63,6 +66,7 @@ export const AdminSettings = () => {
       await api.put("/admin/settings", payload);
       toast.success("Configuración guardada. Los cambios se aplican de inmediato.");
       setLlmKey("");
+      setGoogleKey("");
       setResendKey("");
       setPaypalSecret("");
       const { data } = await api.get("/admin/settings");
@@ -171,6 +175,21 @@ export const AdminSettings = () => {
           </p>
           <div className="mt-5 grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
+              <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">Proveedor de IA activo</label>
+              <select
+                value={s.llm_provider || "emergent"}
+                onChange={(e) => set("llm_provider", e.target.value)}
+                data-testid="settings-llm_provider-select"
+                className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors bg-white"
+              >
+                <option value="emergent">Emergent Universal Key (por defecto)</option>
+                <option value="google">Google Gemini — API Key propia</option>
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Con "Google Gemini" la plataforma llama directamente a la API de Google con tu propia clave (aistudio.google.com), sin pasar por la Universal Key de Emergent.
+              </p>
+            </div>
+            <div className="sm:col-span-2">
               <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">API Key de IA (Emergent LLM Key)</label>
               <input
                 type="text"
@@ -181,7 +200,21 @@ export const AdminSettings = () => {
                 className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors font-mono"
               />
               <p className="text-[10px] text-slate-400 mt-1">
-                Déjalo vacío para mantener la clave actual. Se usa para el análisis y la clasificación con Gemini.
+                Déjalo vacío para mantener la clave actual. Se usa cuando el proveedor activo es "Emergent Universal Key".
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">API Key de Google Gemini (opcional)</label>
+              <input
+                type="text"
+                value={googleKey}
+                onChange={(e) => setGoogleKey(e.target.value)}
+                placeholder={s.google_key_masked ? `Actual: ${s.google_key_masked} — escribe aquí para reemplazarla` : "AIza…"}
+                data-testid="settings-google_api_key-input"
+                className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Obtén tu clave en aistudio.google.com → "Get API key". Solo se usa si el proveedor activo es "Google Gemini".
               </p>
             </div>
             <Input label="Modelo de IA" field="ai_model" value={s.ai_model} onChange={set} hint="Ej.: gemini-3.1-pro-preview" />

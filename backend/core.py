@@ -71,6 +71,7 @@ SETTINGS_DEFAULTS = {
     "paypal_mode": "sandbox",
     "price_consulting": 30.0,
     "consulting_budget_usd": 3.5,
+    "llm_provider": "emergent",
 }
 
 
@@ -87,4 +88,9 @@ async def get_app_settings() -> dict:
     merged["paypal_secret"] = doc.get("paypal_secret") or os.environ.get("PAYPAL_SECRET", "")
     if not doc.get("paypal_mode"):
         merged["paypal_mode"] = os.environ.get("PAYPAL_MODE", SETTINGS_DEFAULTS["paypal_mode"])
+    merged["google_api_key"] = doc.get("google_api_key") or os.environ.get("GOOGLE_API_KEY", "")
+    if merged.get("llm_provider") == "google" and merged["google_api_key"]:
+        merged["active_llm_key"] = merged["google_api_key"]
+    else:
+        merged["active_llm_key"] = merged["llm_key"]
     return merged

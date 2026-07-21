@@ -132,6 +132,9 @@ async def admin_get_settings(user: dict = Depends(get_current_user)):
     s["resend_key_masked"] = _mask_key(resend_key)
     paypal_secret = s.pop("paypal_secret", "")
     s["paypal_secret_masked"] = _mask_key(paypal_secret)
+    google_key = s.pop("google_api_key", "")
+    s["google_key_masked"] = _mask_key(google_key)
+    s.pop("active_llm_key", None)
     return s
 
 
@@ -141,7 +144,13 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
     updates = data.model_dump(exclude_none=True)
     if updates.get("paypal_mode") not in (None, "sandbox", "live"):
         raise HTTPException(status_code=400, detail="Modo PayPal inválido: usa 'sandbox' o 'live'")
-    for key_field in ("llm_key", "resend_api_key", "paypal_secret"):
+    if updates.get("llm_provider") not in (None, "emergent", "google"):
+        raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'emergent' o 'google'")
+    if updates.get("llm_provider") == "google":
+        current = await get_app_settings()
+        if not updates.get("google_api_key") and not current.get("google_api_key"):
+            raise HTTPException(status_code=400, detail="Configura primero tu API Key de Google antes de activarla como proveedor")
+    for key_field in ("llm_key", "resend_api_key", "paypal_secret", "google_api_key"):
         if key_field in updates and not str(updates[key_field]).strip():
             updates.pop(key_field)
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()

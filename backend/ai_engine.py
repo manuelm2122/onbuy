@@ -100,7 +100,7 @@ async def classify_uploaded_documents(doc_ids: List[str]):
         )
         cfg = await get_app_settings()
         chat = LlmChat(
-            api_key=cfg["llm_key"],
+            api_key=cfg["active_llm_key"],
             session_id=f"classify-{uuid.uuid4().hex[:8]}",
             system_message="Eres un clasificador de documentos financieros de condominios en Perú. Respondes únicamente JSON válido.",
         ).with_model("gemini", cfg["ai_model"])

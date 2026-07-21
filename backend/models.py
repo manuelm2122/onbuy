@@ -129,6 +129,8 @@ class SettingsInput(BaseModel):
     paypal_mode: Optional[str] = None
     price_consulting: Optional[float] = None
     consulting_budget_usd: Optional[float] = None
+    google_api_key: Optional[str] = None
+    llm_provider: Optional[str] = None
 
 
 class CreateOrderInput(BaseModel):
