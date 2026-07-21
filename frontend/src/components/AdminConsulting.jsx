@@ -96,7 +96,7 @@ const Message = ({ m, caseId, onExport, exporting }) => {
         {(m.attachments || []).map((a) => (
           <AttachmentChip key={a.stored_name} att={a} caseId={caseId} />
         ))}
-        {!isUser && m.id && m.content && (
+        {!isUser && m.id && !String(m.id).startsWith("local-") && m.content && (
           <div className="mt-3 flex flex-wrap gap-2">
             {m.has_document && (
               <button
