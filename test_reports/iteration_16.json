@@ -1,0 +1,25 @@
+{
+  "summary": "E2E verified the fix for the intermittent 'AI response disappears after streaming' bug in the consulting chat. Login as otptest@test.com → tab-consultoria → opened paid case 'Revisión contrato arrendamiento' (id 6a5c91fed9399e87ed31f537) → sent ONE real LLM chat ('Responde en una sola frase muy corta: ¿qué es una cláusula penal?'). The assistant streamed and answered ('Es una estipulación contractual que establece una sanción económica...'). Response remained VISIBLE after streaming ended AND after waiting 10 seconds AND after a full F5 reload (screenshot confirms 'Exportar PDF' export button present on the assistant bubble, which is only rendered when m.id exists, i.e., server-persisted). MongoDB confirms: db.case_messages now has 4 records (user+assistant pair added) and db.cases.spent_usd grew 0.004054 → 0.009819 (+0.005765 USD). Backend generate() inspected: the db.case_messages.insert_one for the assistant answer happens OUTSIDE the streaming try/except and BEFORE the yield of the [ERROR] tail (lines 476-491), so partial answers are persisted even on stream failures — matches the fix description. Frontend sendMessage inspected: after the read-loop it appends a local assistant message immediately (lines 356-361) and calls refreshCaseAfterChat which retries up to 3 times and replaces only if the last server message is assistant (lines 302-319) — matches the fix.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_consulting_paid_iter15.py"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "consulting.py generate() (line 476-491): OK — insert is outside stream try; but note the stream_error message '[ERROR] La respuesta se interrumpió' is yielded to the client but the assistant DB row saved does NOT contain that error suffix (only the accumulated chunks). Consider persisting the error tail into the saved message too so the user sees the same interrupted note after reload; currently on stream failure, the partial answer persists silently without the error hint on reload.",
+    "AdminConsulting.jsx sendMessage (line 356-361): the local assistant fallback uses id `local-assistant-<ts>`. When refreshCaseAfterChat later replaces `messages` with server data, the local id is discarded — good. If refresh fails all 3 times, the local message stays visible but with a local- id so 'Exportar PDF' and 'Documento' buttons still render (Message component checks `m.id`), which would call exportPdf with local- id and 404 on the backend. Consider hiding action buttons when id starts with 'local-'.",
+    "AdminConsulting.jsx sendMessage: input is cleared BEFORE the request completes (line 326). If the fetch fails immediately (network) the typed text is lost. Minor UX.",
+    "consulting.py generate(): stream_cost is computed only from StreamDone; if stream is interrupted before StreamDone, cost=0 and the partial answer is free. Acceptable but worth flagging."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (persistence + spent_usd increment verified via mongosh)", "frontend": "100% (visible immediately, after 10s, and after F5 reload)"},
+  "test_credentials": "otptest@test.com / nuevapass456",
+  "seed_data_creation": "None. Real LLM chat used ONCE (budget-constrained per request). Case 6a5c91fed9399e87ed31f537 now has 4 messages instead of 2; spent_usd 0.009819 (was 0.004054). Nothing deleted.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The disappearing-message bug is fixed end-to-end. If you need to re-run a real chat, remember budget cap (~3.49 USD remaining). The persisted assistant messages carry Mongo ObjectId strings; local ones carry 'local-assistant-<ts>' prefix — use that to distinguish server-persisted vs optimistic UI copies.",
+  "rca of the issue": "ORIGINAL BUG RCA: (a) frontend cleared streamText and relied on refreshCaseAfterChat to reload; if the reload arrived before the backend inserted the assistant row (race) OR the reload failed, the answer vanished from the UI; (b) backend only inserted the assistant row AFTER a clean StreamDone; if the LLM stream broke mid-response the partial answer was lost. FIX APPLIED (verified): (1) backend: insert of the accumulated chunks is now outside the stream try and runs even on stream_error (consulting.py L476-491); (2) frontend: after the stream, an immediate local assistant bubble is appended so the response is never invisible, and refreshCaseAfterChat retries up to 3× with 700/1400/2100ms backoff, replacing the list only when the last server message is 'assistant' (AdminConsulting.jsx L302-319, L356-361)."
+}

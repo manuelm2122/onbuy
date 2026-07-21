@@ -299,6 +299,25 @@ export const AdminConsulting = () => {
     }
   };
 
+  const refreshCaseAfterChat = async (id) => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const { data } = await api.get(`/cases/${id}`);
+        setSelected(data.case);
+        const last = data.messages[data.messages.length - 1];
+        if (last && last.role === "assistant") {
+          setMessages(data.messages);
+          loadCases();
+          return;
+        }
+      } catch {
+        // reintenta
+      }
+      await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+    }
+    loadCases();
+  };
+
   const sendMessage = async () => {
     if ((!input.trim() && pendingFiles.length === 0) || sending) return;
     setSending(true);
@@ -334,8 +353,14 @@ export const AdminConsulting = () => {
         setStreamText(acc);
       }
       if (acc.includes("[ERROR]")) toast.error("La respuesta terminó con errores");
-      await openCase(selected.id);
-      loadCases();
+      if (acc.trim()) {
+        setMessages((prev) => [
+          ...prev,
+          { id: `local-assistant-${Date.now()}`, role: "assistant", content: acc, attachments: [] },
+        ]);
+      }
+      setStreamText("");
+      await refreshCaseAfterChat(selected.id);
     } catch (err) {
       toast.error(err.message);
     } finally {

@@ -460,6 +460,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         async def generate():
             chunks = []
             cost = 0.0
+            stream_error = None
             try:
                 msg = UserMessage(text=prompt_text, file_contents=file_contents or None)
                 async for ev in chat.stream_message(msg):
@@ -469,19 +470,25 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                     elif isinstance(ev, StreamDone):
                         cost = _stream_cost(ev.usage)
                         break
-                answer = "".join(chunks)
-                await db.case_messages.insert_one({
-                    "case_id": case_id,
-                    "role": "assistant",
-                    "content": answer,
-                    "attachments": [],
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                })
+            except Exception as e:
+                logger.error(f"Error en chat de consultoría: {e}")
+                stream_error = str(e)
+            answer = "".join(chunks)
+            try:
+                if answer.strip():
+                    await db.case_messages.insert_one({
+                        "case_id": case_id,
+                        "role": "assistant",
+                        "content": answer,
+                        "attachments": [],
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    })
                 await db.cases.update_one({"_id": ObjectId(case_id)}, {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
                 await _track_usage(case_id, cost)
             except Exception as e:
-                logger.error(f"Error en chat de consultoría: {e}")
-                yield f"\n\n[ERROR] No se pudo completar la respuesta: {str(e)}"
+                logger.error(f"Error guardando respuesta de consultoría: {e}")
+            if stream_error:
+                yield f"\n\n[ERROR] La respuesta se interrumpió: {stream_error}"
 
         return StreamingResponse(
             generate(),
