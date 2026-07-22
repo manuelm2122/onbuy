@@ -11,6 +11,7 @@ from consulting import create_consulting_router
 from routes.auth import router as auth_router
 from routes.audits import router as audits_router
 from routes.admin import router as admin_router
+from routes.backup import router as backup_router
 from routes.public import router as public_router
 from routes.complaints import router as complaints_router
 from routes.payments import router as payments_router
@@ -21,6 +22,7 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_router)
 api_router.include_router(audits_router)
 api_router.include_router(admin_router)
+api_router.include_router(backup_router)
 api_router.include_router(public_router)
 api_router.include_router(complaints_router)
 api_router.include_router(payments_router)

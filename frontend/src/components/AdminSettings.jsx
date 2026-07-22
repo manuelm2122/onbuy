@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { KeyRound, Settings2, Building2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
+import { BackupPanel } from "@/components/BackupPanel";
 
 const Input = ({ label, field, value, onChange, type = "text", placeholder, hint }) => (
   <div>
@@ -341,6 +342,8 @@ export const AdminSettings = () => {
             <Input label="Ciudad" field="empresa_ciudad" value={s.empresa_ciudad} onChange={set} />
           </div>
         </div>
+
+        <BackupPanel />
 
         <button
           onClick={save}
