@@ -84,7 +84,10 @@ main() {
   local after; after="$(git rev-parse HEAD)"
   echo "Código: ${before:0:7} -> ${after:0:7}"
   [ -f backend/.env ] || die "Falta backend/.env"
-  [ -f frontend/.env ] || die "Falta frontend/.env"
+  if [ "${SKIP_FRONTEND:-0}" != "1" ] && [ -z "${REACT_APP_BACKEND_URL:-}" ] \
+     && ! grep -qs '^REACT_APP_BACKEND_URL=' frontend/.env frontend/.env.production frontend/.env.local frontend/.env.production.local; then
+    die "No encuentro REACT_APP_BACKEND_URL (ni en frontend/.env* ni como variable). Crea frontend/.env con: REACT_APP_BACKEND_URL=https://tu-dominio"
+  fi
 
   step "3/6 Dependencias del backend"
   local venv; venv="$(find_venv)"
