@@ -1,0 +1,20 @@
+{
+  "summary": "Sandbox testing of /app/scripts/update.sh fix for the backend/uploads ownership bug. Built isolated bare-origin + clone harness (no modifications to /app or real services) and ran 6 scenarios covering default owner preservation, UPLOADS_OWNER override, the regression case (uploads previously owned by root), REACT_APP_BACKEND_URL enforcement, SKIP_FRONTEND bypass, and content integrity after pull. 16/16 assertions passed. Script syntax clean (bash -n and shellcheck -S error).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/tmp/test_update/run_tests.sh"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "shellcheck -S warning reports SC2034 at line 142 ('for i in $(seq 1 15)' - variable 'i' unused). Harmless; could be replaced with 'for _ in' for cleanliness.",
+    "detect_service uses `grep -rl \"$APP_DIR\" /etc/systemd/system/*.service`; if $APP_DIR contains regex metacharacters this could misbehave. Consider `grep -F`.",
+    "The find_venv function auto-creates a venv when none exists but does not chown it to the service user; on first run after this fix, the newly created venv will still be root-owned (not part of the reported bug, but a similar footgun if the service tries to write there).",
+    "chown runs only after `import server` succeeds (step 3/6). If import fails, uploads keep the state they had before the script ran - good for safety, and in this test suite we pre-populated the correct owner so T2 still demonstrates no regression."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (16/16 harness assertions)", "frontend": "n/a (skipped per request)"},
+  "seed_data_creation": "Test-only: two temporary Linux users (upd_tester, upd_tester2) and sandbox dirs under /tmp/test_update - all deleted after the run. No changes to /app or real services.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Harness script /tmp/test_update/run_tests.sh covers: bash -n, shellcheck, default owner preservation (ownership + user mkdir + untracked/tracked/upstream file semantics + backup artefacts), UPLOADS_OWNER override, regression (root-owned uploads corrected), REACT_APP_BACKEND_URL abort without SKIP_FRONTEND, and SKIP_FRONTEND bypass. Script dies at step 5/6 (restart_backend) in sandbox as expected because no systemd/pm2/supervisor manages the fake APP_DIR; chown happens just before restart so ownership checks are still valid.",
+  "rca of the issue": "Original bug: `chown -R` of backend/uploads was done using the owner of the install directory (root). Fix captures the intended owner BEFORE any file operation: UPLOADS_OWNER env var > systemd `User=` of the detected BACKEND_SERVICE > current owner of backend/uploads. Validated: (a) when uploads is already owned by a non-root user, that owner is preserved; (b) when UPLOADS_OWNER is explicitly set, it overrides; (c) when uploads is incorrectly root-owned, passing UPLOADS_OWNER restores a working non-root owner and the service user can mkdir subdirectories (e.g. uploads/cases/<id>)."
+}
