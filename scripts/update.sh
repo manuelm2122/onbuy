@@ -108,7 +108,7 @@ main() {
   "$venv/bin/pip" install -q -r backend/requirements.txt
   "$venv/bin/pip" install -q emergentintegrations --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ \
     || warn "No se pudo instalar emergentintegrations: la opción 'Universal Key de Emergent' no funcionará (Gemini y Vertex sí)."
-  PYTHONDONTWRITEBYTECODE=1 "$venv/bin/python" -c "import sys; sys.path.insert(0, 'backend'); import server" \
+  PYTHONDONTWRITEBYTECODE=1 "$venv/bin/python" -c "import sys; sys.path.insert(0, 'backend'); import server, pandas" \
     || die "El backend no arranca con el código nuevo. No se reinició el servicio; la web sigue con la versión anterior en memoria."
 
   if [ "${SKIP_FRONTEND:-0}" != "1" ]; then
