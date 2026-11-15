@@ -13,7 +13,49 @@ from core import db, get_app_settings, logger
 VALID_CATEGORIES = {"factura", "estado_cuenta", "recibo", "contrato", "libro_actas", "presupuesto", "otro"}
 
 
-def build_chat(cfg: dict, session_id: str, system_message: str, initial_messages=None, model: str = None) -> LlmChat:
+class EmergentChat:
+    """Adaptador de la Universal Key de Emergent a la interfaz de gemini_chat."""
+
+    def __init__(self, api_key, session_id, system_message, initial_messages, model):
+        from emergentintegrations.llm.chat import LlmChat as ELlmChat
+        self.inner = ELlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message=system_message,
+            initial_messages=initial_messages or None,
+        ).with_model("gemini", model)
+
+    def with_tools(self, tools):
+        self.inner.with_tools(tools)
+        return self
+
+    def with_params(self, **params):
+        self.inner.with_params(**params)
+        return self
+
+    def _convert(self, message):
+        from emergentintegrations.llm.chat import UserMessage as EUserMessage, FileContentWithMimeType as EFile
+        files = [EFile(mime_type=f.mime_type, file_path=str(f.file_path)) for f in (message.file_contents or [])]
+        return EUserMessage(text=message.text, file_contents=files or None)
+
+    async def stream_message(self, message):
+        from emergentintegrations.llm.chat import TextDelta as ETextDelta, StreamDone as EStreamDone
+        from gemini_chat import Usage
+        async for ev in self.inner.stream_message(self._convert(message)):
+            if isinstance(ev, ETextDelta):
+                if ev.content:
+                    yield TextDelta(ev.content)
+            elif isinstance(ev, EStreamDone):
+                u = ev.usage
+                yield StreamDone(Usage(getattr(u, "input_tokens", 0) or 0, getattr(u, "output_tokens", 0) or 0), ev.content or "")
+
+    async def send_message_multimodal_response(self, message):
+        return await self.inner.send_message_multimodal_response(self._convert(message))
+
+
+def build_chat(cfg: dict, session_id: str, system_message: str, initial_messages=None, model: str = None):
+    if cfg.get("llm_provider") == "emergent":
+        return EmergentChat(cfg["active_llm_key"], session_id, system_message, initial_messages, model or cfg["ai_model"])
     chat = LlmChat(
         api_key=cfg["active_llm_key"],
         session_id=session_id,

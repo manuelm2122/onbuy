@@ -73,6 +73,9 @@ SETTINGS_DEFAULTS = {
     "consulting_budget_usd": 3.5,
     "llm_provider": "google",
     "vertex_location": "us-central1",
+    "whatsapp_enabled": True,
+    "whatsapp_number": "51999888777",
+    "whatsapp_message": "Hola OnBuySolutions, estoy interesado en: {servicio}",
 }
 
 
@@ -97,5 +100,6 @@ async def get_app_settings() -> dict:
     elif merged.get("llm_provider") == "vertex" and merged["vertex_service_account_json"]:
         merged["active_llm_key"] = "vertex-service-account"
     else:
+        merged["llm_provider"] = "emergent"
         merged["active_llm_key"] = merged["llm_key"]
     return merged

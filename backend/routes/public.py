@@ -18,6 +18,7 @@ def _contact_notification_html(doc: dict) -> str:
     <tr style="background:#F8FAFC;"><td width="30%"><b>Nombre</b></td><td>{doc['name']}</td></tr>
     <tr><td><b>Email</b></td><td>{doc['email']}</td></tr>
     <tr style="background:#F8FAFC;"><td><b>Teléfono</b></td><td>{doc.get('phone') or '—'}</td></tr>
+    <tr><td><b>Servicio</b></td><td>{doc.get('service') or '—'}</td></tr>
     <tr><td><b>Mensaje</b></td><td>{doc['message']}</td></tr>
   </table>
   <p style="font-size:12px; color:#64748B;">Gestiónalo desde el panel de administración → pestaña Mensajes.</p>
@@ -51,6 +52,9 @@ async def public_settings():
         "price_medium": s["price_medium"],
         "price_consulting": s["price_consulting"],
         "contact_email": s["contact_email"],
+        "whatsapp_enabled": bool(s["whatsapp_enabled"]),
+        "whatsapp_number": s["whatsapp_number"],
+        "whatsapp_message": s["whatsapp_message"],
     }
 
 

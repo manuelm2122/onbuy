@@ -4,7 +4,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider, useTheme } from "@/context/ThemeContext";
+import Home from "@/pages/Home";
 import Landing from "@/pages/Landing";
+import LegalService from "@/pages/LegalService";
+import Blog from "@/pages/Blog";
+import BlogPost from "@/pages/BlogPost";
 import AuthPage from "@/pages/AuthPage";
 import Panel from "@/pages/Panel";
 import AuditDetail from "@/pages/AuditDetail";
@@ -34,7 +38,11 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/auditorias-condominios" element={<Landing />} />
+          <Route path="/asesoria-legal" element={<LegalService />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/acceso" element={<AuthPage />} />
           <Route path="/terminos" element={<LegalPage />} />
           <Route path="/privacidad" element={<LegalPage />} />

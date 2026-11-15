@@ -104,6 +104,7 @@ export const AdminContacts = () => {
                       </span>
                     )}
                   </div>
+                  {c.service && <p className="text-[11px] font-semibold text-[#0284C7] mt-2" data-testid={`contact-service-${c.id}`}>Servicio: {c.service}</p>}
                   <p className="text-sm text-slate-600 mt-2 leading-relaxed whitespace-pre-wrap">{c.message}</p>
                   <p className="text-[11px] text-slate-400 mt-2">{fmtDate(c.created_at)}</p>
                 </div>

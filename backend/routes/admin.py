@@ -153,8 +153,14 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
     updates = data.model_dump(exclude_none=True)
     if updates.get("paypal_mode") not in (None, "sandbox", "live"):
         raise HTTPException(status_code=400, detail="Modo PayPal inválido: usa 'sandbox' o 'live'")
-    if updates.get("llm_provider") not in (None, "google", "vertex"):
-        raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'google' o 'vertex'")
+    if updates.get("llm_provider") not in (None, "emergent", "google", "vertex"):
+        raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'emergent', 'google' o 'vertex'")
+    if "whatsapp_number" in updates:
+        updates["whatsapp_number"] = "".join(ch for ch in str(updates["whatsapp_number"]) if ch.isdigit())
+    if updates.get("llm_provider") == "emergent":
+        current = await get_app_settings()
+        if not updates.get("llm_key") and not current.get("llm_key"):
+            raise HTTPException(status_code=400, detail="No hay una Universal Key de Emergent configurada")
     if "vertex_service_account_json" in updates:
         raw = str(updates["vertex_service_account_json"]).strip()
         if not raw:
@@ -237,6 +243,7 @@ async def admin_list_contacts(user: dict = Depends(get_current_user)):
             "email": d.get("email", "—"),
             "phone": d.get("phone"),
             "message": d.get("message", ""),
+            "service": d.get("service"),
             "read": bool(d.get("read", False)),
             "created_at": d.get("created_at"),
         }

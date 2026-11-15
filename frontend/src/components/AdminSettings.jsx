@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { KeyRound, Settings2, Building2, Save } from "lucide-react";
+import { KeyRound, Settings2, Building2, Save, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
 import { BackupPanel } from "@/components/BackupPanel";
@@ -57,6 +57,9 @@ export const AdminSettings = () => {
         empresa_ciudad: s.empresa_ciudad,
       };
       payload.llm_provider = s.llm_provider || "emergent";
+      payload.whatsapp_enabled = !!s.whatsapp_enabled;
+      payload.whatsapp_number = s.whatsapp_number || "";
+      payload.whatsapp_message = s.whatsapp_message || "";
       if (llmKey.trim()) payload.llm_key = llmKey.trim();
       if (googleKey.trim()) payload.google_api_key = googleKey.trim();
       if (vertexJson.trim()) payload.vertex_service_account_json = vertexJson.trim();
@@ -188,12 +191,12 @@ export const AdminSettings = () => {
                 data-testid="settings-llm_provider-select"
                 className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors bg-white"
               >
-                <option value="emergent">Emergent Universal Key (por defecto)</option>
+                <option value="emergent">Universal Key de Emergent</option>
                 <option value="google">Google Gemini — API Key propia</option>
                 <option value="vertex">Google Vertex AI — cuenta de servicio (JSON)</option>
               </select>
               <p className="text-[10px] text-slate-400 mt-1">
-                Con "Google Gemini" usas tu API Key de aistudio.google.com. Con "Vertex AI" usas una cuenta de servicio de Google Cloud (archivo JSON) — ideal si tu organización no permite crear API keys.
+                Con "Universal Key" usas el saldo de tu clave de Emergent, sin cuenta de Google. Con "Google Gemini" usas tu API Key de aistudio.google.com. Con "Vertex AI" usas una cuenta de servicio de Google Cloud (archivo JSON) — ideal si tu organización no permite crear API keys.
               </p>
             </div>
             <div className="sm:col-span-2">
@@ -254,6 +257,30 @@ export const AdminSettings = () => {
             <Input label="Precio plan mediano-grande (S/, 50-150)" field="price_medium" value={s.price_medium} onChange={set} />
             <Input label="Precio consulta legal IA (S/)" field="price_consulting" value={s.price_consulting} onChange={set} hint="Precio por consulta y por cada recarga" />
             <Input label="Uso de IA incluido por pago (USD)" field="consulting_budget_usd" value={s.consulting_budget_usd} onChange={set} hint="Presupuesto en tokens Gemini que incluye cada pago de consulta" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 p-6" data-testid="settings-whatsapp-card">
+          <div className="flex items-center gap-3">
+            <MessageCircle className="text-[#0284C7]" size={22} strokeWidth={1.5} />
+            <h3 className="font-heading font-bold text-[#0F172A]">Botón flotante de WhatsApp</h3>
+          </div>
+          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+            Aparece en las páginas públicas. El visitante elige el servicio que le interesa y se abre el chat con el
+            mensaje ya escrito.
+          </p>
+          <div className="mt-5 grid sm:grid-cols-2 gap-4">
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={!!s.whatsapp_enabled}
+                onChange={(e) => set("whatsapp_enabled", e.target.checked)}
+                data-testid="settings-whatsapp_enabled-checkbox"
+              />
+              Mostrar el botón de WhatsApp en la web
+            </label>
+            <Input label="Número de WhatsApp" field="whatsapp_number" value={s.whatsapp_number} onChange={set} placeholder="51999888777" hint="Con código de país, solo dígitos. Ej.: 51 + número" />
+            <Input label="Mensaje inicial" field="whatsapp_message" value={s.whatsapp_message} onChange={set} hint="Usa {servicio} donde debe ir el servicio elegido" />
           </div>
         </div>
 

@@ -13,16 +13,13 @@ import {
   BrainCircuit,
   FileBadge,
   CheckCircle2,
-  Scale,
-  FileSignature,
   Video,
-  Gavel,
-  Calculator,
-  Users,
 } from "lucide-react";
-import { toast } from "sonner";
 import { FaqSection } from "@/components/FaqSection";
-import { api, formatApiErrorDetail } from "@/lib/api";
+import { api } from "@/lib/api";
+import { SiteFooter } from "@/components/SiteFooter";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { ContactSection } from "@/components/ContactSection";
 
 const HERO_IMG =
   "https://images.unsplash.com/photo-1479839672679-a46483c0e7c8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAxODF8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBjb25kb21pbml1bSUyMGFyY2hpdGVjdHVyZXxlbnwwfHx8fDE3ODM2Mjk2ODZ8MA&ixlib=rb-4.1.0&q=85";
@@ -90,7 +87,7 @@ const features = [
 ];
 
 export default function Landing() {
-  const [pricing, setPricing] = useState({ price_small: 1100, price_medium: 2100, price_consulting: 30 });
+  const [pricing, setPricing] = useState({ price_small: 1100, price_medium: 2100 });
 
   useEffect(() => {
     api
@@ -99,35 +96,18 @@ export default function Landing() {
       .catch(() => {});
   }, []);
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
-  const [sending, setSending] = useState(false);
-
-  const submitContact = async (e) => {
-    e.preventDefault();
-    setSending(true);
-    try {
-      await api.post("/contact", form);
-      toast.success("Mensaje enviado. Te contactaremos pronto.");
-      setForm({ name: "", email: "", phone: "", message: "" });
-    } catch (err) {
-      toast.error(formatApiErrorDetail(err.response?.data?.detail));
-    } finally {
-      setSending(false);
-    }
-  };
-
   return (
     <div className="bg-[#020617] text-slate-100 min-h-screen">
       {/* NAV */}
       <nav className="glass-nav fixed top-0 inset-x-0 z-50" data-testid="landing-nav">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-          <a href="#inicio" className="font-heading font-black text-xl tracking-tight" data-testid="nav-logo">
+          <Link to="/" className="font-heading font-black text-xl tracking-tight" data-testid="nav-logo">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
-          </a>
+          </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-300">
+            <Link to="/" className="hover:text-white transition-colors" data-testid="nav-link-inicio">Todos los servicios</Link>
             <a href="#como-funciona" className="hover:text-white transition-colors" data-testid="nav-link-como-funciona">Cómo funciona</a>
             <a href="#servicios" className="hover:text-white transition-colors" data-testid="nav-link-servicios">Servicios</a>
-            <a href="#consultoria" className="hover:text-white transition-colors" data-testid="nav-link-consultoria">Consultoría</a>
             <a href="#precios" className="hover:text-white transition-colors" data-testid="nav-link-precios">Precios</a>
             <a href="#faq" className="hover:text-white transition-colors" data-testid="nav-link-faq">FAQ</a>
             <a href="#contacto" className="hover:text-white transition-colors" data-testid="nav-link-contacto">Contacto</a>
@@ -318,142 +298,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CONSULTORÍA INCLUIDA */}
-      <section id="consultoria" className="bg-white py-24 lg:py-32" data-testid="section-consultoria">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10">
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <p className="text-xs tracking-[0.3em] uppercase text-[#0284C7] font-semibold">Servicio independiente</p>
-            <span className="bg-sky-50 border border-sky-200 text-[#0284C7] text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1 rounded-full" data-testid="consultoria-price-badge">
-              S/ {Number(pricing.price_consulting).toLocaleString("es-PE")} por consulta
-            </span>
-          </div>
-          <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-[#0F172A] max-w-3xl">
-            Consultoría legal y contable con IA, cuando la necesites
-          </h2>
-          <p className="text-slate-600 mt-4 max-w-2xl text-sm leading-relaxed">
-            No necesitas contratar una auditoría: crea tu cuenta, abre tu caso por{" "}
-            S/ {Number(pricing.price_consulting).toLocaleString("es-PE")} y trabaja de inmediato con un consultor IA
-            que combina tres especialidades — abogado civil, abogado penal y contador peruano — sobre tus documentos
-            reales. Todo queda en un expediente digital con entregables descargables en PDF.
-          </p>
-
-          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-9 max-w-5xl">
-            {[
-              {
-                icon: FileSearch,
-                title: "Análisis de contratos",
-                desc: "Sube tu contrato de arrendamiento, de servicios o laboral: la IA detecta cláusulas abusivas, vacíos y debilidades, y te sugiere cómo corregirlos antes de firmar.",
-              },
-              {
-                icon: FileSignature,
-                title: "Redacción de documentos",
-                desc: "Contratos, cartas notariales, requerimientos de pago, acuerdos de junta y reglamentos internos redactados a tu medida, listos para descargar en PDF.",
-              },
-              {
-                icon: Landmark,
-                title: "Denuncias y reclamos",
-                desc: "Borradores de denuncias ante Indecopi o la comisaría, y reclamos a administradoras, inmobiliarias o proveedores, con el sustento normativo correspondiente.",
-              },
-              {
-                icon: Gavel,
-                title: "Demandas y escritos judiciales",
-                desc: "Borradores de demandas de desalojo, cobro de cuotas de mantenimiento o deudas, listos para que tu abogado colegiado los revise y presente.",
-              },
-              {
-                icon: Calculator,
-                title: "Orientación contable y tributaria",
-                desc: "Cuentas y presupuestos de tu junta de propietarios, obligaciones ante SUNAT y buenas prácticas para administrar el dinero del condominio.",
-              },
-              {
-                icon: Users,
-                title: "Conflictos de condominio",
-                desc: "Morosidad, uso de áreas comunes, ruidos, mascotas u obras: qué dice la Ley 27157 y su reglamento, y cómo actuar paso a paso.",
-              },
-            ].map((b, i) => (
-              <motion.div
-                key={b.title}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-60px" }}
-                custom={i}
-                className="flex flex-col gap-3"
-                data-testid={`consultoria-benefit-${i}`}
-              >
-                <b.icon className="text-[#0284C7]" size={26} strokeWidth={1.5} />
-                <h3 className="font-heading font-bold text-[#0F172A] text-sm">{b.title}</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">{b.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-14 grid md:grid-cols-3 gap-6">
-            {[
-              {
-                src: "/previews/consultoria-chat.jpg",
-                caption: "Expediente del caso: análisis legal y documentos redactados al instante",
-              },
-              {
-                src: "/previews/consultoria-biblioteca.jpg",
-                caption: "Biblioteca del expediente: cada documento descargable en PDF",
-              },
-              {
-                src: "/previews/consultoria-imagen.jpg",
-                caption: "Diagramas y evidencia visual generados con IA para tu caso",
-              },
-            ].map((s, i) => (
-              <motion.figure
-                key={s.src}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-60px" }}
-                custom={i}
-                className="group"
-                data-testid={`consultoria-preview-${i}`}
-              >
-                <div className="border border-slate-200 rounded-lg overflow-hidden shadow-lg shadow-slate-200/60 group-hover:shadow-xl group-hover:border-[#0284C7]/40 transition-all">
-                  <div className="bg-slate-100 border-b border-slate-200 px-3 py-2 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-300" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-300" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
-                    <span className="ml-2 text-[10px] text-slate-400 font-medium">OnBuySolutions — Consultoría</span>
-                  </div>
-                  <img src={s.src} alt={s.caption} loading="lazy" className="w-full h-auto" />
-                </div>
-                <figcaption className="mt-3 text-xs text-slate-500 leading-relaxed flex items-start gap-2">
-                  <CheckCircle2 className="text-[#0284C7] shrink-0 mt-0.5" size={14} />
-                  {s.caption}
-                </figcaption>
-              </motion.figure>
-            ))}
-          </div>
-
-          <div className="mt-12 bg-[#F8FAFC] border border-slate-200 p-6 lg:p-8 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6" data-testid="consultoria-pricing-banner">
-            <div className="flex items-start gap-4">
-              <Scale className="text-[#0284C7] shrink-0" size={28} strokeWidth={1.5} />
-              <div>
-                <h3 className="font-heading font-bold text-[#0F172A]">
-                  S/ {Number(pricing.price_consulting).toLocaleString("es-PE")} por consulta, con recargas al mismo precio
-                </h3>
-                <p className="text-sm text-slate-500 mt-1 max-w-xl leading-relaxed">
-                  Cada pago incluye un amplio paquete de uso de IA para tu caso. ¿Lo agotaste? Recarga por el
-                  mismo precio y continúa en el mismo expediente, con todo tu historial y documentos intactos.
-                  Paga con PayPal o tarjeta y empieza al instante.
-                </p>
-              </div>
-            </div>
-            <Link
-              to="/acceso"
-              data-testid="consultoria-cta"
-              className="shrink-0 inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-6 py-3 rounded-full text-sm transition-colors"
-            >
-              Iniciar mi consulta <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* PRECIOS */}
       <section id="precios" className="bg-[#020617] py-24 lg:py-32 grain relative">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 relative">
@@ -465,7 +309,7 @@ export default function Landing() {
             Un pago único por cada año de documentación procesada: estados de cuenta bancarios,
             facturas y recibos de mantenimiento.
           </p>
-          <div className="mt-14 grid md:grid-cols-3 gap-8 max-w-6xl">
+          <div className="mt-14 grid md:grid-cols-2 gap-8 max-w-4xl">
             {[
               {
                 name: "Condominio pequeño",
@@ -498,22 +342,6 @@ export default function Landing() {
                 cta: "Solicitar auditoría",
                 testid: "pricing-card-mediano",
                 featured: true,
-              },
-              {
-                name: "Consultoría Legal IA",
-                target: "Por consulta, sin auditoría",
-                price: Number(pricing.price_consulting).toLocaleString("es-PE"),
-                unit: "por consulta",
-                features: [
-                  "Chat con IA: abogado civil, penal y contador peruano",
-                  "Análisis de contratos y documentos (PDF, imágenes, audio, video)",
-                  "Redacción de escritos y documentos descargables en PDF",
-                  "Informe final del expediente al cerrar tu caso",
-                ],
-                bonus: { icon: Scale, text: "Incluye un amplio paquete de uso de IA. Recarga por el mismo precio y continúa en el mismo caso.", cls: "sky" },
-                cta: "Iniciar mi consulta",
-                testid: "pricing-card-consultoria",
-                featured: false,
               },
             ].map((p, i) => (
               <motion.div
@@ -612,109 +440,9 @@ export default function Landing() {
       {/* PREGUNTAS FRECUENTES */}
       <FaqSection />
 
-      {/* CONTACTO */}
-      <section id="contacto" className="bg-[#020617] py-24 lg:py-32">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 grid lg:grid-cols-2 gap-16">
-          <div>
-            <p className="text-xs tracking-[0.3em] uppercase text-[#0EA5E9] font-semibold mb-4">Contacto</p>
-            <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white">
-              Hablemos de tu condominio
-            </h2>
-            <p className="text-slate-400 mt-6 leading-relaxed max-w-md">
-              ¿Tienes dudas sobre el servicio, los documentos necesarios o el valor legal del
-              informe? Escríbenos y un especialista de OnBuySolutions te responderá.
-            </p>
-          </div>
-          <form onSubmit={submitContact} className="space-y-5" data-testid="contact-form">
-            <div className="grid sm:grid-cols-2 gap-5">
-              <input
-                required
-                data-testid="contact-name-input"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Nombre completo"
-                className="w-full bg-slate-900 border border-slate-700 focus:border-[#0EA5E9] outline-none text-white px-5 py-4 text-sm transition-colors"
-              />
-              <input
-                required
-                type="email"
-                data-testid="contact-email-input"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="Correo electrónico"
-                className="w-full bg-slate-900 border border-slate-700 focus:border-[#0EA5E9] outline-none text-white px-5 py-4 text-sm transition-colors"
-              />
-            </div>
-            <input
-              data-testid="contact-phone-input"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              placeholder="Teléfono (opcional)"
-              className="w-full bg-slate-900 border border-slate-700 focus:border-[#0EA5E9] outline-none text-white px-5 py-4 text-sm transition-colors"
-            />
-            <textarea
-              required
-              rows={4}
-              data-testid="contact-message-input"
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              placeholder="Cuéntanos sobre tu condominio y qué necesitas auditar…"
-              className="w-full bg-slate-900 border border-slate-700 focus:border-[#0EA5E9] outline-none text-white px-5 py-4 text-sm transition-colors resize-none"
-            />
-            <button
-              type="submit"
-              disabled={sending}
-              data-testid="contact-submit-btn"
-              className="bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-60 text-white font-semibold px-8 py-4 rounded-full text-sm transition-colors"
-            >
-              {sending ? "Enviando…" : "Enviar mensaje"}
-            </button>
-          </form>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="bg-[#020617] border-t border-slate-800 py-10">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div>
-            <p className="font-heading font-black text-lg">
-              OnBuy<span className="text-[#0EA5E9]">Solutions</span>
-            </p>
-            <p className="text-xs text-slate-500 mt-2">
-              © {new Date().getFullYear()} OnBuySolutions — Auditorías de condominios con IA · Perú
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
-            <Link to="/terminos" className="hover:text-white transition-colors" data-testid="footer-link-terminos">
-              Términos y Condiciones
-            </Link>
-            <Link to="/privacidad" className="hover:text-white transition-colors" data-testid="footer-link-privacidad">
-              Política de Privacidad
-            </Link>
-            <Link to="/uso-ia" className="hover:text-white transition-colors" data-testid="footer-link-uso-ia">
-              Aviso de Uso de IA
-            </Link>
-            <Link
-              to="/libro-de-reclamaciones"
-              data-testid="footer-link-libro-reclamaciones"
-              className="inline-flex items-center gap-2 border border-slate-700 hover:border-[#0EA5E9] hover:text-white px-3.5 py-2 rounded transition-colors"
-            >
-              <img src="/libro-reclamaciones.png" alt="Libro de Reclamaciones" className="w-7 h-7 object-contain" />
-              <span className="font-semibold leading-tight">Libro de<br />Reclamaciones</span>
-            </Link>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 mt-6 pt-6 border-t border-slate-900">
-          <p className="text-[11px] text-slate-600 leading-relaxed max-w-4xl">
-            OnBuySolutions es un proveedor de servicios tecnológicos (SaaS) y no una entidad financiera: no
-            capta depósitos del público ni administra fondos de terceros, por lo que no se encuentra bajo
-            supervisión de la SBS ni de la SMV. Los informes son generados mediante algoritmos automatizados
-            de Inteligencia Artificial y requieren la supervisión y validación final del usuario humano,
-            conforme a la Ley N° 31814 y su Reglamento (D.S. N° 115-2025-PCM). Tratamiento de datos conforme a
-            la Ley N° 29733 y D.S. N° 016-2024-JUS.
-          </p>
-        </div>
-      </footer>
+      <ContactSection defaultService="auditorias" heading="Hablemos de tu condominio" />
+      <SiteFooter />
+      <WhatsAppButton defaultService="auditorias" />
     </div>
   );
 }

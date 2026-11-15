@@ -103,6 +103,7 @@ class ContactInput(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     message: str = Field(min_length=5)
+    service: Optional[str] = Field(default=None, max_length=120)
 
 
 class ContactReadInput(BaseModel):
@@ -134,6 +135,9 @@ class SettingsInput(BaseModel):
     vertex_service_account_json: Optional[str] = None
     vertex_project: Optional[str] = None
     vertex_location: Optional[str] = None
+    whatsapp_enabled: Optional[bool] = None
+    whatsapp_number: Optional[str] = None
+    whatsapp_message: Optional[str] = None
 
 
 class CreateOrderInput(BaseModel):
