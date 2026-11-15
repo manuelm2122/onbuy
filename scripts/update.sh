@@ -24,11 +24,14 @@ find_venv() {
   echo "$APP_DIR/backend/venv"
 }
 
+detect_service() {
+  if [ -z "$BACKEND_SERVICE" ] && command -v systemctl >/dev/null; then
+    BACKEND_SERVICE="$(grep -rl "$APP_DIR" /etc/systemd/system/*.service 2>/dev/null | head -n1 | xargs -r basename || true)"
+  fi
+}
+
 restart_backend() {
   local svc="$BACKEND_SERVICE"
-  if [ -z "$svc" ] && command -v systemctl >/dev/null; then
-    svc="$(grep -rl "$APP_DIR" /etc/systemd/system/*.service 2>/dev/null | head -n1 | xargs -r basename || true)"
-  fi
   if [ -n "$svc" ] && command -v systemctl >/dev/null && systemctl cat "$svc" >/dev/null 2>&1; then
     systemctl restart "$svc"
     echo "systemd: $svc reiniciado"
@@ -55,6 +58,16 @@ main() {
   git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
   local branch="${BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
   local before; before="$(git rev-parse HEAD)"
+
+  detect_service
+  local uploads_owner="${UPLOADS_OWNER:-}" build_owner=""
+  if [ -z "$uploads_owner" ] && [ -n "$BACKEND_SERVICE" ] && command -v systemctl >/dev/null; then
+    uploads_owner="$(systemctl show "$BACKEND_SERVICE" -p User --value 2>/dev/null || true)"
+  fi
+  if [ -z "$uploads_owner" ] && [ -d backend/uploads ]; then
+    uploads_owner="$(stat -c '%U:%G' backend/uploads)"
+  fi
+  [ -d frontend/build ] && build_owner="$(stat -c '%U:%G' frontend/build)"
 
   step "1/6 Copia de seguridad de archivos subidos y .env"
   mkdir -p "$BACKUP_DIR"
@@ -117,8 +130,8 @@ main() {
   fi
 
   step "5/6 Reiniciando el backend"
-  local owner; owner="$(stat -c '%U:%G' "$APP_DIR")"
-  chown -R "$owner" backend/uploads frontend/build 2>/dev/null || true
+  [ -n "$uploads_owner" ] && chown -R "$uploads_owner" backend/uploads
+  [ -n "$build_owner" ] && [ -d frontend/build ] && chown -R "$build_owner" frontend/build
   restart_backend
   if command -v nginx >/dev/null && nginx -t >/dev/null 2>&1; then
     systemctl reload nginx 2>/dev/null || true
