@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="2" failures="0" skipped="0" tests="2" time="0.518" timestamp="2026-11-15T12:27:47.847799+00:00" hostname="agent-env-72865b88-55bf-45ba-8146-963178a15cb8"><testcase classname="" name="tests.test_iteration17_blog_whatsapp_settings" time="0.000"><error message="collection failure">tests/test_iteration17_blog_whatsapp_settings.py:6: in &lt;module&gt;
+    BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/") or pytest.exit("REACT_APP_BACKEND_URL missing")
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   _pytest.outcomes.Exit: REACT_APP_BACKEND_URL missing</error><error message="collection failure">tests/test_iteration17_blog_whatsapp_settings.py:6: in &lt;module&gt;
+    BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/") or pytest.exit("REACT_APP_BACKEND_URL missing")
+                                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   _pytest.outcomes.Exit: REACT_APP_BACKEND_URL missing</error></testcase></testsuite></testsuites>

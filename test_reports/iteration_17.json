@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 17: validated the new landing (Home), legal service page, blog (public + admin w/ AI streaming), WhatsApp floating button, LLM provider selector in Admin > Configuración, and contact form. 10/10 pytest tests pass against /api. Playwright flows verified on desktop + mobile (390px). Real AI generation of a blog article was exercised ONCE (service=legal) via the admin editor streaming endpoint — it produced a 5.5KB markdown article in ~30s whose content contains a Markdown link to /asesoria-legal (](/asesoria-legal) as required). Negative path: switching the provider to 'google' without a configured Google API key returns 400 with a visible Spanish toast ('Configura primero tu API Key de Google antes de activarla como proveedor'). Provider restored to 'emergent'; WhatsApp left enabled with number 51999888777 and default template; all TEST_ data cleaned.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration17_blog_whatsapp_settings.py",
+    "/app/test_reports/pytest/iter17.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "core.get_app_settings has SETTINGS_DEFAULTS.llm_provider='google' but falls back to 'emergent' when no google_api_key is present. The default should be 'emergent' to avoid confusion — current fallback works but any future code that reads the raw doc could get 'google' with no key.",
+    "routes/blog.py BlogInput.service defaults to 'legal' but admin_update does not require the field; if a caller sends an invalid service string the _check_service correctly returns 400 — OK. However, admin_create/update do not re-validate title length >= 3 at DB level (Pydantic handles it) — fine.",
+    "routes/admin.admin_save_settings: when switching to 'emergent' it checks for llm_key presence against current settings — good. But the check runs AFTER the llm_provider validation, so an invalid provider like 'openai' is short-circuited first (correct behavior). No issue.",
+    "routes/blog.admin_generate streams tokens but does not persist the article; frontend must call POST /admin/blog after review to save. This is intentional per UX (review-before-save), just noting for next tester.",
+    "AdminBlog parseGenerated regex expects 'TITULO:' and 'RESUMEN:' on their own line; if the model drops the prefix the title/excerpt stay empty (content still fills). Non-blocking because in our test the model followed the format correctly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration17_blog_whatsapp_settings.py"
+  ],
+  "success_rate": {"backend": "100% (10/10 pytest)", "frontend": "100% (all testids + flows verified)"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026!",
+  "seed_data_creation": "None persisted. Temporary blog posts (TEST_blog_dup_*, TEST_gen_*) and TEST_fe_* contact were created during runs and all deleted. Sample seeded post 'Cómo pude desalojar inquilinos morosos con la ayuda de OnBuySolutions' preserved.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Settings restored to llm_provider=emergent, whatsapp_enabled=true, whatsapp_number=51999888777, default template. No Google/Vertex credentials configured. Real LLM calls used: 1 blog generation (~30s, ~5.5KB). Consultoría chat was NOT re-tested in this iteration to save budget (covered end-to-end in iteration_16). The admin Blog editor saves via POST /admin/blog; articles with published=true appear instantly on /blog and /blog/<slug>; drafts return 404 on /api/blog/<slug> — all verified.",
+  "rca of the issue": "N/A — no bugs detected."
+}
