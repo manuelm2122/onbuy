@@ -96,3 +96,5 @@ Sistema de auditorías a condominios en Perú usando la IA de Google más avanza
 - P2: UX menor (code review iter_12): tras 5 intentos OTP fallidos sugerir explícitamente "Reenviar código" en la UI; desacoplar reenvío automático de código del endpoint login
 - P2: Agregación Mongo para contadores en /admin/users (evitar N+1); consulting.py duplica _require_admin/_md_inline
 - P2: Notificaciones por email al completar auditoría (Resend/SendGrid); firma digital del PDF; multi-idioma; pagos (suscripción por auditoría con Stripe/Culqi)
+
+- [x] Script de actualización del VPS (2026-11): scripts/update.sh (respaldo de uploads y .env, fetch + merge ff-only, pip, build con swap, reinicio autodetectado systemd/pm2/supervisor, verificación). Instalación en /var/www/auditoria. NO probado contra el VPS real.
