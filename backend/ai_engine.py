@@ -1,3 +1,4 @@
+from gemini_chat import LlmChat, UserMessage, FileContentWithMimeType, TextDelta, StreamDone
 import re
 import json
 import uuid
@@ -6,7 +7,6 @@ from typing import List
 
 from bson import ObjectId
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType, TextDelta, StreamDone
 
 from core import db, get_app_settings, logger
 

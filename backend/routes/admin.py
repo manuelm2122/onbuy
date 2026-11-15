@@ -153,8 +153,8 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
     updates = data.model_dump(exclude_none=True)
     if updates.get("paypal_mode") not in (None, "sandbox", "live"):
         raise HTTPException(status_code=400, detail="Modo PayPal inválido: usa 'sandbox' o 'live'")
-    if updates.get("llm_provider") not in (None, "emergent", "google", "vertex"):
-        raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'emergent', 'google' o 'vertex'")
+    if updates.get("llm_provider") not in (None, "google", "vertex"):
+        raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'google' o 'vertex'")
     if "vertex_service_account_json" in updates:
         raw = str(updates["vertex_service_account_json"]).strip()
         if not raw:

@@ -1,3 +1,28 @@
+
+class LlmChat:
+    def __init__(self, *args, **kwargs):
+        raise RuntimeError("IA emergent no disponible")
+    async def send_message(self, *args, **kwargs):
+        raise RuntimeError("IA emergent no disponible")
+    def send_message_stream(self, *args, **kwargs):
+        raise RuntimeError("IA emergent no disponible")
+        yield None
+
+class UserMessage:
+    def __init__(self, *args, **kwargs):
+        self.text = args[0] if args else kwargs.get("text")
+
+class FileContentWithMimeType:
+    def __init__(self, *args, **kwargs):
+        pass
+
+class TextDelta:
+    def __init__(self, *args, **kwargs):
+        self.content = kwargs.get("content", "")
+
+class StreamDone:
+    pass
+
 import re
 import uuid
 import shutil
@@ -10,7 +35,6 @@ from bson import ObjectId
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
 
 from core import db, logger, get_app_settings, UPLOAD_DIR, SAMPLES_DIR, SAMPLE_META, MAX_FILE_SIZE, EXT_MIME, CATEGORY_LABELS
 from models import Audit, AuditCreate, DocumentOut

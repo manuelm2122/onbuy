@@ -13,9 +13,10 @@ from fastapi.responses import StreamingResponse, FileResponse
 from bson import ObjectId
 from pydantic import BaseModel, Field
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType, TextDelta, StreamDone
 
 from ai_engine import build_chat
+
+from gemini_chat import LlmChat, UserMessage, FileContentWithMimeType, TextDelta, StreamDone
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
@@ -25,6 +26,32 @@ from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle
 
 logger = logging.getLogger(__name__)
+
+def _expediente_block(case_doc, messages, new_attachments=None):
+    docs = []
+    seen = set()
+    for m in messages:
+        for a in m.get("attachments") or []:
+            name = a.get("filename")
+            if name and name not in seen:
+                seen.add(name)
+                docs.append(name)
+    for a in new_attachments or []:
+        name = a.get("filename")
+        if name and name not in seen:
+            seen.add(name)
+            docs.append(name)
+    memoria = (case_doc.get("memoria") or "").strip()
+    lines = [
+        f"CASO ACTUAL: {case_doc.get('title') or ''}. {case_doc.get('description') or ''}",
+        "DOCUMENTOS YA ENTREGADOS EN ESTE EXPEDIENTE. No pidas reenviarlos si están en esta lista:",
+        "\n".join(f"- {n}" for n in docs) or "- ninguno todavía",
+        "Usa solo este expediente. No mezcles hechos de otros casos.",
+    ]
+    if memoria:
+        lines.append("MEMORIA ACUMULADA DEL CASO:\n" + memoria)
+    return "\n".join(lines)
+
 
 MAX_CASE_FILE_SIZE = 50 * 1024 * 1024
 IMAGE_MODEL = "gemini-3.1-flash-image-preview"
@@ -439,7 +466,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         await db.case_messages.insert_one(user_msg)
 
         prior = await db.case_messages.find({"case_id": case_id, "_id": {"$ne": user_msg["_id"]}}).sort("created_at", 1).to_list(1000)
-        history = [{"role": "system", "content": CONSULTING_SYSTEM_PROMPT + f"\n\nCASO ACTUAL: {case_doc['title']}. {case_doc.get('description') or ''}"}]
+        history = []
         for m in prior:
             content = m.get("content", "")
             if m.get("attachments"):
@@ -447,6 +474,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                 content = f"{content}\n[Archivos adjuntados en este mensaje: {names}]".strip()
             if content:
                 history.append({"role": m["role"], "content": content})
+        expediente = _expediente_block(case_doc, prior, attachments)
 
         file_contents = await _prepare_attachment_contents(attachments, case_dir)
         prompt_text = text.strip() or "Analiza los archivos adjuntos e intégralos al expediente del caso."
@@ -455,7 +483,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         chat = build_chat(
             cfg,
             session_id=f"case-{case_id}",
-            system_message=CONSULTING_SYSTEM_PROMPT,
+            system_message=CONSULTING_SYSTEM_PROMPT + "\n\n" + expediente,
             initial_messages=history,
         ).with_tools([{"googleSearch": {}}])
 
@@ -485,7 +513,21 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                         "attachments": [],
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     })
-                await db.cases.update_one({"_id": ObjectId(case_id)}, {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
+                nombres = ", ".join(a["filename"] for a in attachments) or "ninguno"
+                bloque = (
+                    f"[{datetime.now(timezone.utc).isoformat()}] "
+                    f"Usuario: {text.strip()[:800]}\n"
+                    f"Archivos de este turno: {nombres}\n"
+                    f"Conclusión: {answer[:3000]}"
+                )
+                memoria = ((case_doc.get("memoria") or "") + "\n\n" + bloque).strip()
+                if len(memoria) > 24000:
+                    memoria = memoria[-24000:]
+                await db.cases.update_one(
+                    {"_id": ObjectId(case_id)},
+                    {"$set": {"updated_at": datetime.now(timezone.utc).isoformat(), "memoria": memoria}},
+                )
+                case_doc["memoria"] = memoria
                 await _track_usage(case_id, cost)
             except Exception as e:
                 logger.error(f"Error guardando respuesta de consultoría: {e}")

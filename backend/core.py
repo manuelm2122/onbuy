@@ -71,7 +71,7 @@ SETTINGS_DEFAULTS = {
     "paypal_mode": "sandbox",
     "price_consulting": 30.0,
     "consulting_budget_usd": 3.5,
-    "llm_provider": "emergent",
+    "llm_provider": "google",
     "vertex_location": "us-central1",
 }
 
