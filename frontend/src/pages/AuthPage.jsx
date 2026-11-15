@@ -154,7 +154,7 @@ export default function AuthPage() {
     <div className="themeable min-h-screen grid lg:grid-cols-2">
       {/* Panel izquierdo */}
       <div className="hidden lg:flex flex-col justify-between bg-[#020617] text-white p-12 grain relative">
-        <Link to="/" className="font-heading font-black text-xl tracking-tight" data-testid="auth-logo-link">
+        <Link to="/" onClick={() => window.scrollTo(0, 0)} className="font-heading font-black text-xl tracking-tight" data-testid="auth-logo-link">
           OnBuy<span className="text-[#0EA5E9]">Solutions</span>
         </Link>
         <div className="max-w-md">

@@ -404,7 +404,7 @@ export default function LegalPage() {
     <div className="themeable min-h-screen bg-[#F8FAFC]">
       <header className="bg-[#020617] text-white">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="font-heading font-black text-lg tracking-tight" data-testid="legal-logo-link">
+          <Link to="/" onClick={() => window.scrollTo(0, 0)} className="font-heading font-black text-lg tracking-tight" data-testid="legal-logo-link">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
           <nav className="flex items-center gap-5 text-xs text-slate-300">

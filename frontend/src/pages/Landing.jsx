@@ -101,7 +101,7 @@ export default function Landing() {
       {/* NAV */}
       <nav className="glass-nav fixed top-0 inset-x-0 z-50" data-testid="landing-nav">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-          <Link to="/" className="font-heading font-black text-xl tracking-tight" data-testid="nav-logo">
+          <Link to="/" onClick={() => window.scrollTo(0, 0)} className="font-heading font-black text-xl tracking-tight" data-testid="nav-logo">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-300">

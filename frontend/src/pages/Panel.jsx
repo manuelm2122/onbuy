@@ -171,7 +171,7 @@ export default function Panel() {
       {/* Header */}
       <header className="bg-[#020617] text-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
-          <Link to="/" className="font-heading font-black text-lg tracking-tight" data-testid="panel-logo">
+          <Link to="/" onClick={() => window.scrollTo(0, 0)} className="font-heading font-black text-lg tracking-tight" data-testid="panel-logo">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
           <div className="flex items-center gap-5">

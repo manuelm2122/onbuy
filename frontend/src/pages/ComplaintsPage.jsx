@@ -81,7 +81,7 @@ export default function ComplaintsPage() {
     <div className="themeable min-h-screen bg-[#F8FAFC]">
       <header className="bg-[#020617] py-4">
         <div className="max-w-4xl mx-auto px-6 flex items-center justify-between">
-          <Link to="/" className="font-heading font-black text-white text-lg" data-testid="complaints-logo-link">
+          <Link to="/" onClick={() => window.scrollTo(0, 0)} className="font-heading font-black text-white text-lg" data-testid="complaints-logo-link">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
           <div className="flex items-center gap-4">
