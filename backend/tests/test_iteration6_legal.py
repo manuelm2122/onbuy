@@ -7,7 +7,7 @@ import requests
 from pymongo import MongoClient
 from bson import ObjectId
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://condominio-audit.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://proyecto-nuevo-10--3sst8oxb.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 ADMIN_EMAIL = "admin@onbuysolutions.com"
 ADMIN_PASSWORD = "OnBuy2026!"
