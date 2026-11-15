@@ -6,7 +6,7 @@ set -Eeuo pipefail
 
 APP_DIR="${APP_DIR:-/var/www/auditoria}"
 BACKEND_SERVICE="${BACKEND_SERVICE:-}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8001/api/}"
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000/api/}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/auditoria}"
 
