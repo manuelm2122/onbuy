@@ -6,7 +6,7 @@ import resend
 from core import get_app_settings, logger
 
 
-async def send_email(to: str, subject: str, html: str, pdf_bytes: bytes = None, pdf_filename: str = None) -> dict:
+async def send_email(to: str, subject: str, html: str, pdf_bytes: bytes = None, pdf_filename: str = None, reply_to: str = None) -> dict:
     cfg = await get_app_settings()
     api_key = cfg.get("resend_api_key")
     if not api_key:
@@ -19,6 +19,8 @@ async def send_email(to: str, subject: str, html: str, pdf_bytes: bytes = None, 
         "subject": subject,
         "html": html,
     }
+    if reply_to:
+        params["reply_to"] = [reply_to]
     if pdf_bytes:
         params["attachments"] = [{
             "filename": pdf_filename or "documento.pdf",

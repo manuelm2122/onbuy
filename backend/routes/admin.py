@@ -163,6 +163,11 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
         if bad:
             raise HTTPException(status_code=400, detail=f"Dirección de correo inválida: {bad[0]}")
         updates["mail_addresses"] = ", ".join(dict.fromkeys(addrs))
+    if "forward_email" in updates:
+        fwd = updates["forward_email"].strip().lower()
+        if fwd and not re.match(r"^[^@\s<>,;]+@[^@\s<>,;]+\.[^@\s<>,;]+$", fwd):
+            raise HTTPException(status_code=400, detail="El correo de reenvío no es válido (usa una sola dirección)")
+        updates["forward_email"] = fwd
     if "whatsapp_number" in updates:
         updates["whatsapp_number"] = "".join(ch for ch in str(updates["whatsapp_number"]) if ch.isdigit())
     if updates.get("llm_provider") == "emergent":

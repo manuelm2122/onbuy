@@ -95,6 +95,7 @@ async def get_app_settings() -> dict:
     merged["google_api_key"] = doc.get("google_api_key") or os.environ.get("GOOGLE_API_KEY", "")
     merged.setdefault("vertex_service_account_json", "")
     merged.setdefault("mail_addresses", "")
+    merged.setdefault("forward_email", "")
     merged["resend_webhook_secret"] = doc.get("resend_webhook_secret") or os.environ.get("RESEND_WEBHOOK_SECRET", "")
     merged.setdefault("vertex_project", "")
     if merged.get("llm_provider") == "google" and merged["google_api_key"]:

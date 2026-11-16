@@ -137,6 +137,7 @@ class SettingsInput(BaseModel):
     vertex_location: Optional[str] = None
     whatsapp_enabled: Optional[bool] = None
     mail_addresses: Optional[str] = None
+    forward_email: Optional[str] = None
     resend_webhook_secret: Optional[str] = None
     whatsapp_number: Optional[str] = None
     whatsapp_message: Optional[str] = None

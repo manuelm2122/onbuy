@@ -28,9 +28,10 @@ def _contact_notification_html(doc: dict) -> str:
 async def _notify_contact(doc: dict):
     cfg = await get_app_settings()
     await send_email(
-        to=cfg["complaints_notify_email"],
+        to=cfg["forward_email"] or cfg["complaints_notify_email"],
         subject=f"[onbuysolutions.com] Nuevo mensaje de contacto de {doc['name']}",
         html=_contact_notification_html(doc),
+        reply_to=doc["email"],
     )
 
 

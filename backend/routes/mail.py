@@ -98,11 +98,46 @@ async def _resend(cfg: dict, method: str, path: str, **kwargs) -> dict:
     return res.json()
 
 
-def _inbound_fields(full: dict) -> dict:
+def _headers(full: dict) -> dict:
     headers = full.get("headers") or {}
     if isinstance(headers, list):
         headers = {h.get("name", ""): h.get("value", "") for h in headers}
-    headers = {str(k).lower(): v for k, v in headers.items()}
+    return {str(k).lower(): v for k, v in headers.items()}
+
+
+async def forward_inbound(cfg: dict, doc: dict, headers: dict):
+    target = _bare(cfg.get("forward_email", ""))
+    if not target or not cfg.get("resend_api_key"):
+        return
+    recipients = [_bare(a) for a in doc["to"] + doc["cc"]]
+    if headers.get("x-onbuy-forwarded") or target in recipients or target == _bare(doc["from_address"]):
+        return
+    esc = html_lib.escape
+    names = ", ".join(a["filename"] for a in doc["attachments"])
+    note = f"Adjuntos (descárgalos desde el panel): {names}" if names else ""
+    if doc.get("content_pending"):
+        note = "No se pudo descargar el contenido; ábrelo en el panel. " + note
+    intro = f"Correo recibido en {', '.join(doc['to'])}\nDe: {doc['from_address']}\nAsunto: {doc['subject']}\n{note}".strip()
+    payload = {
+        "from": f"OnBuySolutions <{mail_addresses(cfg)[0]}>",
+        "to": [target],
+        "subject": f"Fwd: {doc['subject']}",
+        "text": f"{intro}\n\n----------\n\n{doc.get('text') or ''}",
+        "html": f'<div style="font-family:Arial,sans-serif;font-size:13px;color:#334155;border-bottom:1px solid #E2E8F0;padding-bottom:10px;margin-bottom:14px">{esc(intro).replace(chr(10), "<br>")}</div>'
+                + (doc.get("html") or f'<pre style="font-family:Arial,sans-serif;white-space:pre-wrap">{esc(doc.get("text") or "")}</pre>'),
+        "headers": {"X-OnBuy-Forwarded": "1"},
+    }
+    sender = _bare(doc["from_address"])
+    if EMAIL_RE.match(sender):
+        payload["reply_to"] = [sender]
+    try:
+        await _resend(cfg, "POST", "/emails", json=payload)
+    except Exception as e:
+        logger.error(f"No se pudo reenviar el correo {doc.get('resend_id')}: {getattr(e, 'detail', e)}")
+
+
+def _inbound_fields(full: dict) -> dict:
+    headers = _headers(full)
     return {
         "from_address": full.get("from") or "",
         "to": full.get("to") or [],
@@ -139,7 +174,10 @@ async def store_inbound(resend_id: str, meta: dict) -> bool:
         **_inbound_fields(full),
     ).to_mongo()
     result = await db.mail_messages.update_one({"resend_id": resend_id}, {"$setOnInsert": doc}, upsert=True)
-    return result.upserted_id is not None
+    if result.upserted_id is None:
+        return False
+    await forward_inbound(cfg, doc, _headers(full))
+    return True
 
 
 def verify_svix(secret: str, headers, body: bytes) -> bool:

@@ -69,6 +69,7 @@ export const AdminSettings = () => {
       if (resendKey.trim()) payload.resend_api_key = resendKey.trim();
       if (webhookSecret.trim()) payload.resend_webhook_secret = webhookSecret.trim();
       payload.mail_addresses = s.mail_addresses || "";
+      payload.forward_email = s.forward_email || "";
       if (paypalSecret.trim()) payload.paypal_secret = paypalSecret.trim();
       payload.resend_sender = s.resend_sender;
       payload.complaints_notify_email = s.complaints_notify_email;
@@ -329,6 +330,7 @@ export const AdminSettings = () => {
           </code>
           <div className="mt-5 grid gap-4">
             <Input label="Direcciones para enviar" field="mail_addresses" value={s.mail_addresses} onChange={set} placeholder="contacto@tudominio.com, ventas@tudominio.com" hint="Separadas por coma. Deben ser del dominio verificado en Resend. Si lo dejas vacío se usa el remitente de arriba." />
+            <Input label="Reenviar copia a" field="forward_email" type="email" value={s.forward_email} onChange={set} placeholder="tucorreo@gmail.com" hint="Cada correo recibido y cada mensaje del formulario de contacto se reenvía aquí. Usa un correo externo (Gmail, Outlook), no uno de este dominio. Vacío = sin reenvío de correos." />
             <div>
               <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">Clave de firma del webhook</label>
               <input
