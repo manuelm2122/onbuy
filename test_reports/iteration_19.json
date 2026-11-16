@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 19: Full backend + frontend testing of the new Admin 'Correos' feature (Resend integration). Added /app/backend/tests/test_iteration19_mail.py with 21 tests covering Svix webhook signature verification (valid/invalid/expired/missing/duplicate/non-received), mail list/meta/read-toggle/delete, auth 401/403, send validations (no API key, from not in list, missing/invalid 'to'), AI draft streaming, and admin settings masking + mail_addresses validation. All 21 pass. UI tested end-to-end on desktop and mobile: login, Correos tab with unread badges (1), config warning banner (no API key), compose/reply flows with from-select preselecting the receiving address, text quoted on reply, AI streaming working with real Emergent LLM (913-char response with 'Equipo OnBuySolutions' signature), attach chip, send button correctly surfaces backend 400 'Configura primero la API Key de Resend', unread toggle refreshes badge, Settings mail-card shows webhook URL and mail_addresses, secret appears masked (whsec_Y2xhdm…Ng==) without leaking the full value, no horizontal overflow at 390px. iframe sandbox for inbound HTML omits allow-scripts (secure).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration19_mail.py",
+    "/app/test_reports/pytest/iter19.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/mail.py send_mail: cuando `to=''` se devuelve 422 (Form string vacío) en vez del 400 con mensaje claro 'Indica al menos un destinatario'. Considera `to: str = Form(..., min_length=1)` o detectar antes y lanzar 400.",
+    "routes/mail.py store_inbound: la combinación 'intentar _resend sobre /emails/receiving/{id} aunque no haya API key' siempre lanza 400 y se maneja con try/except setteando content_pending=True. Funciona, pero evitar la llamada cuando `cfg.resend_api_key` esté vacío ahorraría un log de warning por cada webhook recibido sin API key.",
+    "routes/mail.py download_attachment: valida que el adjunto pertenezca al correo (next()), ok; sin embargo no distingue 'correo no encontrado' de 'adjunto no encontrado' y ambos devuelven 404 con el mismo mensaje. Aceptable.",
+    "AdminMail.jsx: el `iframe` incluye `base target=\"_blank\"` dentro de srcDoc, lo cual abre enlaces en nueva pestaña aún sin `allow-popups` del sandbox (se habilita con `allow-popups allow-popups-to-escape-sandbox`). Está OK; recordar NO añadir allow-scripts/allow-same-origin.",
+    "MailComposer.jsx: cuando el ancho es <390 el chip `mail-file-chip-N` puede desbordar si el nombre es largo; probar con un .txt largo. No es bloqueante.",
+    "AI draft: StreamingResponse no respeta el límite de 2 llamadas mencionado en el enunciado; el endpoint puede llamarse muchas veces. Si se desea cap, añadir rate-limit por sesión."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration19_mail.py (nuevo)"
+  ],
+  "success_rate": {"backend": "100% (21/21)", "frontend": "100% (core flows)"},
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! (de /app/memory/test_credentials.md). Un usuario no-admin temporal (TEST_user_*) se crea y elimina durante los tests con email_verified flip por DB.",
+  "seed_data_creation": "Ningún dato persistente nuevo. Los correos TEST_* creados se borran en teardown; se restauró test-inbound-001 (read=false, content_pending=true) tras la ejecución. Webhook secret y mail_addresses en settings NO fueron modificados.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "La batería test_iteration19_mail.py cubre los escenarios del webhook (incluyendo firma Svix válida construida manualmente con la clave base64 tras whsec_). Los tests invocan /api/webhooks/resend contra http://localhost:8001 porque el ingress bloquea el User-Agent de python-requests en algunas peticiones. Si se añade API key de Resend, el test TestMailCrud::test_meta_returns_addresses_and_flags deberá ajustar can_send=True.",
+  "rca of the issue": "No se encontraron bugs funcionales. Solo recomendaciones de mejora (ver critical_code_review_comments)."
+}

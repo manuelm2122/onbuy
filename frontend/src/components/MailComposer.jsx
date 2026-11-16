@@ -139,8 +139,8 @@ export const MailComposer = ({ addresses, replyTo, onClose, onSent }) => {
         {files.length > 0 && (
           <ul className="mt-3 flex flex-wrap gap-2">
             {files.map((f, i) => (
-              <li key={`${f.name}-${i}`} className="inline-flex items-center gap-2 bg-slate-100 text-xs text-slate-700 px-3 py-1.5 rounded-full" data-testid={`mail-file-chip-${i}`}>
-                {f.name}
+              <li key={`${f.name}-${i}`} className="inline-flex items-center gap-2 max-w-full bg-slate-100 text-xs text-slate-700 px-3 py-1.5 rounded-full" data-testid={`mail-file-chip-${i}`}>
+                <span className="truncate">{f.name}</span>
                 <button type="button" onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-600 transition-colors"><X size={13} /></button>
               </li>
             ))}

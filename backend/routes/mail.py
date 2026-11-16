@@ -256,7 +256,7 @@ async def ai_draft(data: MailDraftInput, user: dict = Depends(get_current_user))
 @router.post("/admin/mail/send")
 async def send_mail(
     from_address: str = Form(...),
-    to: str = Form(...),
+    to: str = Form(""),
     subject: str = Form(..., min_length=1, max_length=300),
     text: str = Form(..., min_length=1),
     cc: str = Form(""),
