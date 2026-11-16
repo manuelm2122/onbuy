@@ -1,3 +1,4 @@
+import re
 import json
 import shutil
 from io import BytesIO
@@ -131,6 +132,7 @@ async def admin_get_settings(user: dict = Depends(get_current_user)):
     s["llm_key_masked"] = _mask_key(llm_key)
     resend_key = s.pop("resend_api_key", "")
     s["resend_key_masked"] = _mask_key(resend_key)
+    s["resend_webhook_secret_masked"] = _mask_key(s.pop("resend_webhook_secret", ""))
     paypal_secret = s.pop("paypal_secret", "")
     s["paypal_secret_masked"] = _mask_key(paypal_secret)
     google_key = s.pop("google_api_key", "")
@@ -155,6 +157,12 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
         raise HTTPException(status_code=400, detail="Modo PayPal inválido: usa 'sandbox' o 'live'")
     if updates.get("llm_provider") not in (None, "emergent", "google", "vertex"):
         raise HTTPException(status_code=400, detail="Proveedor de IA inválido: usa 'emergent', 'google' o 'vertex'")
+    if "mail_addresses" in updates:
+        addrs = [a.strip().lower() for a in re.split(r"[,;\n]", updates["mail_addresses"]) if a.strip()]
+        bad = [a for a in addrs if not re.match(r"^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$", a)]
+        if bad:
+            raise HTTPException(status_code=400, detail=f"Dirección de correo inválida: {bad[0]}")
+        updates["mail_addresses"] = ", ".join(dict.fromkeys(addrs))
     if "whatsapp_number" in updates:
         updates["whatsapp_number"] = "".join(ch for ch in str(updates["whatsapp_number"]) if ch.isdigit())
     if updates.get("llm_provider") == "emergent":
@@ -183,7 +191,7 @@ async def admin_save_settings(data: SettingsInput, user: dict = Depends(get_curr
         current = await get_app_settings()
         if not updates.get("vertex_service_account_json") and not current.get("vertex_service_account_json"):
             raise HTTPException(status_code=400, detail="Pega primero el JSON de la cuenta de servicio de Google Cloud antes de activar Vertex AI")
-    for key_field in ("llm_key", "resend_api_key", "paypal_secret", "google_api_key"):
+    for key_field in ("llm_key", "resend_api_key", "resend_webhook_secret", "paypal_secret", "google_api_key"):
         if key_field in updates and not str(updates[key_field]).strip():
             updates.pop(key_field)
     updates["updated_at"] = datetime.now(timezone.utc).isoformat()

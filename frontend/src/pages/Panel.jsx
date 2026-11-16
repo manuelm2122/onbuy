@@ -34,6 +34,7 @@ import { AdminContacts } from "@/components/AdminContacts";
 import { AdminComplaints } from "@/components/AdminComplaints";
 import { AdminPayments } from "@/components/AdminPayments";
 import { AdminBlog } from "@/components/AdminBlog";
+import { AdminMail } from "@/components/AdminMail";
 
 const SAMPLE_CATS = {
   estado_cuenta: "Estado de cuenta",
@@ -79,6 +80,7 @@ export default function Panel() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  const [mailUnread, setMailUnread] = useState(0);
   const [audits, setAudits] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -128,6 +130,14 @@ export default function Panel() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (user?.role !== "admin") return undefined;
+    const check = () => api.get("/admin/mail/meta").then(({ data }) => setMailUnread(data.unread)).catch(() => {});
+    check();
+    const timer = setInterval(check, 60000);
+    return () => clearInterval(timer);
+  }, [user?.role]);
 
   const createAudit = async (e) => {
     e.preventDefault();
@@ -318,6 +328,12 @@ export default function Panel() {
             {user?.role === "admin" && (
               <TabsTrigger value="reclamos" data-testid="tab-reclamos-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
                 Reclamos
+              </TabsTrigger>
+            )}
+            {user?.role === "admin" && (
+              <TabsTrigger value="correos" data-testid="tab-correos-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Correos
+                {mailUnread > 0 && <span className="ml-2 bg-[#0284C7] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full" data-testid="tab-correos-unread">{mailUnread}</span>}
               </TabsTrigger>
             )}
             {user?.role === "admin" && (
@@ -512,6 +528,11 @@ export default function Panel() {
           {user?.role === "admin" && (
             <TabsContent value="reclamos" className="mt-8">
               <AdminComplaints />
+            </TabsContent>
+          )}
+          {user?.role === "admin" && (
+            <TabsContent value="correos" className="mt-8">
+              <AdminMail onUnreadChange={setMailUnread} />
             </TabsContent>
           )}
           {user?.role === "admin" && (

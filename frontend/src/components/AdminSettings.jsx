@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { KeyRound, Settings2, Building2, Save, MessageCircle } from "lucide-react";
+import { KeyRound, Settings2, Building2, Save, MessageCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
 import { BackupPanel } from "@/components/BackupPanel";
@@ -25,6 +25,7 @@ export const AdminSettings = () => {
   const [googleKey, setGoogleKey] = useState("");
   const [vertexJson, setVertexJson] = useState("");
   const [resendKey, setResendKey] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
   const [paypalSecret, setPaypalSecret] = useState("");
   const [saving, setSaving] = useState(false);
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
@@ -66,6 +67,8 @@ export const AdminSettings = () => {
       if (s.vertex_project) payload.vertex_project = s.vertex_project;
       if (s.vertex_location) payload.vertex_location = s.vertex_location;
       if (resendKey.trim()) payload.resend_api_key = resendKey.trim();
+      if (webhookSecret.trim()) payload.resend_webhook_secret = webhookSecret.trim();
+      payload.mail_addresses = s.mail_addresses || "";
       if (paypalSecret.trim()) payload.paypal_secret = paypalSecret.trim();
       payload.resend_sender = s.resend_sender;
       payload.complaints_notify_email = s.complaints_notify_email;
@@ -77,6 +80,7 @@ export const AdminSettings = () => {
       setGoogleKey("");
       setVertexJson("");
       setResendKey("");
+      setWebhookSecret("");
       setPaypalSecret("");
       const { data } = await api.get("/admin/settings");
       setS(data);
@@ -308,6 +312,35 @@ export const AdminSettings = () => {
             </div>
             <Input label="Remitente (from)" field="resend_sender" value={s.resend_sender} onChange={set} hint="Debe ser de un dominio verificado en Resend. En modo prueba: onboarding@resend.dev" />
             <Input label="Email de notificación de reclamos" field="complaints_notify_email" value={s.complaints_notify_email} onChange={set} hint="Aquí recibirás cada nuevo reclamo o queja" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 p-6" data-testid="settings-mail-card">
+          <div className="flex items-center gap-3">
+            <Mail className="text-[#0284C7]" size={22} strokeWidth={1.5} />
+            <h3 className="font-heading font-bold text-[#0F172A]">Correos (bandeja del panel)</h3>
+          </div>
+          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+            Usa la misma API Key de Resend de arriba (debe tener acceso completo, no solo de envío). Para recibir,
+            crea en Resend un webhook con el evento <b>email.received</b> hacia esta dirección y pega aquí su clave de firma:
+          </p>
+          <code className="mt-2 block bg-slate-100 text-xs text-slate-700 px-3 py-2 break-all" data-testid="settings-webhook-url">
+            {window.location.origin}/api/webhooks/resend
+          </code>
+          <div className="mt-5 grid gap-4">
+            <Input label="Direcciones para enviar" field="mail_addresses" value={s.mail_addresses} onChange={set} placeholder="contacto@tudominio.com, ventas@tudominio.com" hint="Separadas por coma. Deben ser del dominio verificado en Resend. Si lo dejas vacío se usa el remitente de arriba." />
+            <div>
+              <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">Clave de firma del webhook</label>
+              <input
+                type="text"
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+                placeholder={s.resend_webhook_secret_masked ? `Actual: ${s.resend_webhook_secret_masked} — escribe aquí para reemplazarla` : "whsec_…"}
+                data-testid="settings-resend_webhook_secret-input"
+                className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors font-mono"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Déjalo vacío para mantener la clave actual.</p>
+            </div>
           </div>
         </div>
 

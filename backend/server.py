@@ -16,6 +16,7 @@ from routes.public import router as public_router
 from routes.complaints import router as complaints_router
 from routes.payments import router as payments_router
 from routes.blog import router as blog_router, seed_blog
+from routes.mail import router as mail_router
 
 app = FastAPI(title="OnBuySolutions API")
 
@@ -28,6 +29,7 @@ api_router.include_router(public_router)
 api_router.include_router(complaints_router)
 api_router.include_router(payments_router)
 api_router.include_router(blog_router)
+api_router.include_router(mail_router)
 api_router.include_router(create_consulting_router(db, get_current_user, get_app_settings, UPLOAD_DIR))
 app.include_router(api_router)
 
@@ -49,6 +51,8 @@ async def startup():
     await db.case_messages.create_index("case_id")
     await db.blog_posts.create_index("slug", unique=True)
     await seed_blog()
+    await db.mail_messages.create_index("resend_id", unique=True, sparse=True)
+    await db.mail_messages.create_index([("direction", 1), ("created_at", -1)])
     if not SAMPLES_DIR.exists() or not any(SAMPLES_DIR.iterdir()):
         from generate_samples import generate_all
         generate_all(SAMPLES_DIR)
