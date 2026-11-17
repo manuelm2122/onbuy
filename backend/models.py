@@ -64,6 +64,7 @@ class ResetPasswordInput(BaseModel):
 
 class Audit(BaseDocument):
     user_id: str
+    client_id: Optional[str] = None
     condominium_name: str
     address: Optional[str] = None
     district: Optional[str] = None

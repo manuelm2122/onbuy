@@ -215,8 +215,9 @@ export default function Panel() {
             </h1>
             <p className="text-slate-500 text-sm mt-1">{isAdmin ? "Clientes, auditorías, asesorías y contenido del sitio." : "Consulta con el agente y gestiona tus casos."}</p>
           </div>
+          {isAdmin && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild className={isAdmin ? "" : "hidden"}>
+            <DialogTrigger asChild>
               <button
                 data-testid="new-audit-btn"
                 className="inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-6 py-3 rounded-full text-sm transition-colors"
@@ -288,6 +289,7 @@ export default function Panel() {
               </form>
             </DialogContent>
           </Dialog>
+          )}
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
