@@ -1,0 +1,65 @@
+{
+  "summary": "Iteration 25 — (a) PWA audit and (b) responsive audit across 11 viewports (320→1920) on 9 public pages, client /panel and 14 admin tabs. PWA: ALL PASS (manifest + icons + SW + offline + iOS install button + fake beforeinstallprompt). Responsive: only two real offenders found — /libro-de-reclamaciones (overflow 320–414) and the LegalPage top-nav of /terminos, /privacidad, /uso-ia (overflow 320–360). Every other combination produced scrollWidth == clientWidth. NO code was changed (audit only).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/libro-de-reclamaciones",
+        "issues": [
+          "ALTA — Horizontal page overflow at 320x568, 360x800, 390x844 and 414x896 (documentElement.scrollWidth = 505px, viewport 320/360/390/414). Root offenders: `button[data-testid=\"complaint-requesttype-select\"]` and `textarea[data-testid=\"complaint-detail-input\"]` both render at width≈460px. The select trigger uses `whitespace-nowrap` and renders the full option text 'Reclamo — Disconformidad relacionada a los productos o servicios…' as a single <span>; because the parent grid column is `sm:col-span-2` without `min-w-0`, the intrinsic content width of the span pushes the whole form (and therefore the page) past 320–414px. Suggestion: on the SelectValue span use `truncate block max-w-full` (or remove the `whitespace-nowrap` on <sm), add `min-w-0 w-full` to the Select trigger and to the grid cell (`sm:col-span-2 min-w-0`). The textarea follows along once the row width is constrained. Confirmed on viewports 320, 360, 390, 414; OK from 768 upward."
+        ]
+      },
+      {
+        "screen": "/terminos, /privacidad, /uso-ia (LegalPage header)",
+        "issues": [
+          "MEDIA — Horizontal page overflow at 320x568 and 360x800 (scrollWidth 379–383). Offender: the top legal nav `<nav class=\"flex items-center gap-5 text-xs text-slate-300\">` containing the three links (`legal-nav-terminos`, `legal-nav-privacidad`, `legal-nav-uso-ia`) plus `theme-toggle-btn`. With `gap-5` (20px) + the three link labels + the 36px round theme toggle the row is ~381px wide and does not fit on 320/360 viewports. Suggestion: on the <sm viewport either use `flex-wrap` on that nav, reduce to `gap-3`, or collapse the labels behind a small overflow menu. Looks fine from 390 upward."
+        ]
+      },
+      {
+        "screen": "Pages / tabs WITHOUT issues (explicit)",
+        "issues": [
+          "/ , /auditorias-condominios , /asesoria-legal , /blog , /blog/<articulo> , /acceso — no horizontal overflow at 320, 360, 390, 414, 768, 820, 1024, 1280, 1366, 1440, 1920.",
+          "/panel (cliente) — no horizontal overflow at the 11 viewports.",
+          "Client case dialogs at 390x844 all fit within the viewport: calculators (h=694), timeline (493), checklist (178), facts (539), ledger (760, internally scrollable), bundle (553), PaymentDialog (708), Nuevo caso (362). None exceed innerH=844.",
+          "Admin /panel on tab-resumen, tab-auditorias, tab-ejemplos, tab-autorizaciones-admin, tab-documentos-admin, tab-consultoria, tab-clientes-auditoria-admin, tab-clientes-admin, tab-pagos-admin, tab-mensajes-admin, tab-reclamos-admin, tab-correos-admin, tab-blog-admin, tab-configuracion-admin — no horizontal overflow at 390x844, 768x1024, 1024x768, 1366x768, 1920x1080.",
+          "Fixed widgets at 390x844: whatsapp-toggle-btn (bottom 748) and chat-launcher-btn (bottom 820) stack vertically, both 56x56 → no overlap and no content being covered. Chat panel on 320 (296x476, bottom 556) fits inside viewport 568."
+        ]
+      }
+    ]
+  },
+  "pwa_audit": {
+    "manifest.json": "OK — 200 application/json; name 'OnBuySolutions', short_name 'OnBuy', start_url '/panel', display 'standalone', theme_color '#020617', lang 'es-PE', icons 192 (any), 512 (any), 512 (maskable).",
+    "icons_real_size": "icon-192.png = 192x192, icon-512.png = 512x512, icon-maskable-512.png = 512x512, apple-touch-icon = 180x180 — all served 200 image/png.",
+    "index.html": "OK — lang='es', <meta theme-color>, <link rel=manifest>, apple-touch-icon, apple-mobile-web-app-capable/title/status-bar.",
+    "/sw.js": "OK — 200 application/javascript; intercepts only navigation requests (event.request.mode === 'navigate'); /api fetches are NOT intercepted nor cached (verified: fetch('/api/__ping') returns 404 from server, no x-from-sw header).",
+    "/offline.html": "OK — 200. When context.set_offline(True) is set and /blog is requested, the SW serves offline.html and the page title 'No hay conexión a internet' is shown. Going back online + reload works.",
+    "navigator.serviceWorker.getRegistration()": "Returned active SW, scope '/', state 'activated'.",
+    "InstallAppButton": "OK — hidden on desktop Chromium (no event, not iOS). After manually dispatching a fake 'beforeinstallprompt' event the button appears and clicking it calls deferredPrompt.prompt() (userChoice resolved -> handled). With iOS Safari UA override: install-app-btn shows in SiteFooter (/) and in the mobile nav (nav-mobile-menu). Click opens install-ios-dialog with the three required steps (Compartir / Añadir a pantalla / Confirmar). The button does NOT appear on /panel for the client logged-in with non-iOS UA — expected."
+  },
+  "test_report_links": [],
+  "action_items": [
+    "HIGH — Fix /libro-de-reclamaciones horizontal overflow at 320/360/390/414. Suggested CSS: on the SelectValue span inside `complaint-requesttype-select`, use `truncate block max-w-full` and add `min-w-0 w-full` on the Select trigger and `sm:col-span-2 min-w-0` on the grid cell. Verify textarea follows.",
+    "MEDIUM — LegalPage top nav (/terminos, /privacidad, /uso-ia): make the header responsive. Options: `flex-wrap gap-3 sm:gap-5`, or hide labels behind a toggle below 400px.",
+    "Optional — add a data-testid on the LegalPage header nav itself to make the audit easier (currently only legal-nav-* links are marked)."
+  ],
+  "critical_code_review_comments": [
+    "sw.js only caches /offline.html and filters by event.request.mode === 'navigate'. This is the correct minimal PWA shell — no risk of caching API responses or app chunks. Good.",
+    "InstallAppButton stores deferredPrompt in a module-scope variable and uses a global listener set for re-rendering; works well across sibling instances (footer + mobile menu + panel header).",
+    "LegalPage header nav uses hard `gap-5` without flex-wrap — predictable overflow on 320–360 (real device: iPhone SE 1 320x568, old Androids 360x800).",
+    "ComplaintsPage form uses whitespace-nowrap inside the Radix Select trigger with a very long option label — classic 'intrinsic min-content' problem; needs min-w-0 on the flex/grid parent chain to allow truncation."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "pwa": "100% (all checks pass)",
+    "responsive_pages": "7/9 public pages clean on all 11 viewports; 2/9 have overflow on <=414/<=360",
+    "responsive_panels": "100% (client /panel + 14 admin tabs clean at the required viewports)"
+  },
+  "test_credentials": "Admin: admin@onbuysolutions.com / OnBuy2026!; Cliente: cliente.prueba@ejemplo.com / Cliente2026!",
+  "seed_data_creation": "None. No cases, messages, files, payments or users were created. Dialogs were opened and closed with Escape only; no AI/chat message was sent to the legal assistant.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Audit tool: a Playwright script that for each (page, viewport) checks `document.documentElement.scrollWidth > clientWidth` and walks the tree collecting elements whose getBoundingClientRect().right > innerWidth+1 while ignoring any ancestor with overflowX auto/scroll/hidden and the sonner toaster <ol>. Confirmed public pages clean at all 11 viewports: /, /auditorias-condominios, /asesoria-legal, /blog, blog article, /acceso. Remaining overflows live in ComplaintsPage form (select+textarea intrinsic widths) and LegalPage header nav (<sm). Panels (cliente + admin 14 tabs) are all clean. iOS install button verified via CDP Emulation.setUserAgentOverride with iPhone UA; desktop Chromium case verified by dispatching a fake beforeinstallprompt event.",
+  "rca of the issue": "ComplaintsPage: `button[data-testid=complaint-requesttype-select]` has whitespace-nowrap + long option label 'Reclamo — Disconformidad relacionada a los productos o servicios contratados.' → intrinsic content width ~460px. The parent grid uses CSS Grid with default `min-width: auto` on items, so the column grows to fit content, pushing the page scrollWidth to 505 regardless of viewport < 460. Fix is to give the grid item (and the Select trigger flexbox child) `min-w-0` so the intrinsic size is ignored and the child can shrink/truncate. LegalPage: the header `flex items-center gap-5` with three label links + 36px toggle totals ~381px and has no flex-wrap, so viewports 320 and 360 overflow by 19–63px."
+}
