@@ -47,7 +47,7 @@ const Section = ({ number, title, children }) => (
         {number}. {title}
       </h2>
     </div>
-    <div className="p-5 grid sm:grid-cols-2 gap-4">{children}</div>
+    <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
   </div>
 );
 
@@ -210,8 +210,8 @@ export default function ComplaintsPage() {
                 <div className="sm:col-span-2">
                   <Field label="Tipo de Solicitud">
                     <Select value={f.request_type} onValueChange={(v) => set("request_type", v)}>
-                      <SelectTrigger className="w-full" data-testid="complaint-requesttype-select"><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="w-full min-w-0 [&>span]:min-w-0 [&>span]:truncate" data-testid="complaint-requesttype-select"><SelectValue /></SelectTrigger>
+                      <SelectContent className="max-w-[calc(100vw-2rem)]">
                         <SelectItem value="Reclamo">Reclamo — Disconformidad relacionada a los productos o servicios</SelectItem>
                         <SelectItem value="Queja">Queja — Disconformidad no relacionada a los productos o servicios; malestar respecto a la atención al público</SelectItem>
                       </SelectContent>

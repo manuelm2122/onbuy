@@ -1,0 +1,58 @@
+{
+  "summary": "Iteration 26 — Retest of responsive fixes claimed by the main agent. BOTH claimed fixes are NOT actually applied: (a) /libro-de-reclamaciones still overflows horizontally at 320/360/390/414 with scrollWidth=505 exactly as iteration 25 — the select trigger and textarea still render at width=460px pushing the page past the viewport; (b) /terminos, /privacidad, /uso-ia still overflow at 320/360 (scrollWidth 379–383) — the legal-nav is still `flex items-center gap-5` with no flex-wrap in the source, and the DOM confirms theme-toggle-btn.right = 379–383 > viewport. Visual review on /, /auditorias-condominios, /asesoria-legal, /blog, /acceso, client /panel and admin /panel at 360/768/1024/1366 looks clean — no broken text, no crushed grids, no deformed images, top bar + 5 links + 'Acceder al panel' fit on one line at 768 and 1024, chat panel at 320x568 (296x476) and 360x800 (336x708) stays inside viewport, floating buttons stack vertically without covering CTAs. PWA quick regression: manifest.json 200, service worker registered and activated.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/libro-de-reclamaciones",
+        "issues": [
+          "ALTA — REGRESIÓN NO CORREGIDA. Overflow horizontal persiste a 320x568, 360x800, 390x844 y 414x896: documentElement.scrollWidth = 505, viewport 320/360/390/414. `button[data-testid=\"complaint-requesttype-select\"]` y `textarea[data-testid=\"complaint-detail-input\"]` siguen renderizando a width=460px con right=505. Verificado en el archivo /app/frontend/src/pages/ComplaintsPage.jsx (líneas 213, 223): el SelectTrigger sigue como `<SelectTrigger className=\"w-full\" ...>` sin `min-w-0` y la SelectValue sigue sin `truncate` / `block max-w-full`. Las opciones del Select al abrirse también se salen (right=741 en viewport 360). OK desde 768 en adelante (scrollWidth == clientWidth). Sugerencia (mismo diagnóstico de iter25): en la celda del grid aplicar `sm:col-span-2 min-w-0`, en el SelectTrigger `w-full min-w-0`, y en la SelectValue (span interno de Radix) `truncate block max-w-full` o removerle el `whitespace-nowrap`."
+        ]
+      },
+      {
+        "screen": "/terminos, /privacidad, /uso-ia (LegalPage header)",
+        "issues": [
+          "MEDIA — REGRESIÓN NO CORREGIDA. Overflow horizontal persiste a 320x568 y 360x800: scrollWidth 379–383 vs viewport 320/360. En /app/frontend/src/pages/LegalPage.jsx línea 410 la nav sigue como `<nav className=\"flex items-center gap-5 text-xs text-slate-300\">` sin `flex-wrap`. El DOM confirma que los 4 elementos (legal-nav-terminos, legal-nav-privacidad, legal-nav-uso-ia, theme-toggle-btn) están todos en una sola línea (y=14–24) y el theme-toggle-btn termina en right=379–383. En /terminos a 320px el texto 'Uso de IA' se parte en 3 líneas DENTRO del propio enlace (por el ancho forzado), lo que es otro síntoma del mismo problema. OK desde 390 en adelante. Sugerencia (mismo diagnóstico de iter25): `flex flex-wrap items-center gap-3 sm:gap-5` sobre esa nav, o colapsar las etiquetas bajo un menú en <sm."
+        ]
+      },
+      {
+        "screen": "Resto de páginas (revisión visual)",
+        "issues": [
+          "INFO — Sin hallazgos visuales negativos a 360/768/1024/1366 en /, /auditorias-condominios, /asesoria-legal, /blog y /acceso: títulos no se parten, tarjetas y grids (2–3 col) proporcionadas, imágenes sin deformar, botones no se cortan, barra superior a 768/1024 presenta 5 enlaces + 'Acceder al panel' en una sola línea sin solape con el logo (hamburguesa aparece solo a 360). scrollWidth == clientWidth en todos (360/768/1024/1366).",
+          "INFO — Panel cliente 360x800 y 768x1024: cabecera, botones Nuevo caso y lista de casos legibles; dentro de 'TEST deuda' las burbujas, barra de cupo ('Te quedan 60 de 63 mensajes.'), menú Herramientas y caja de texto + botón enviar se ven sin desplazamiento lateral. scrollWidth == clientWidth.",
+          "INFO — Panel admin 768x1024 y 1024x768: 14 pestañas se distribuyen en 3 filas (768) o 2 filas (1024) y son completamente clicables; cards de resumen proporcionadas; sin overflow.",
+          "INFO — Widgets flotantes 360x800: whatsapp-toggle-btn (y=648) y chat-launcher-btn (y=720) apilados verticalmente, 56x56 cada uno, no tapan botones de acción principales. En 768x1024 el chat-launcher aparece expandido (210px, 'Chatea con nosotros') pero queda a la derecha, sin tapar el submit del formulario de contacto. Con chat-panel abierto a 360x800 (336x708) y 320x568 (296x476) el panel cabe dentro del viewport y se cierra con Escape."
+        ]
+      }
+    ]
+  },
+  "pwa_quick_regression": {
+    "manifest": "OK (200 application/json)",
+    "service_worker": "OK — getRegistration() devuelve SW activo, scope '/'",
+    "note": "No se repitió el audit completo de PWA porque no cambió nada relacionado; iteración 25 pasó al 100%."
+  },
+  "test_report_links": ["/app/test_reports/screens_iter26/"],
+  "action_items": [
+    "HIGH — Aplicar de verdad el fix de /libro-de-reclamaciones. En /app/frontend/src/pages/ComplaintsPage.jsx: añadir `min-w-0` a la celda del grid que contiene el Select y a la celda del textarea (`sm:col-span-2 min-w-0`), cambiar el SelectTrigger a `className=\"w-full min-w-0\"`, y en la `<SelectValue />` envolver o aplicar `className=\"truncate block max-w-full\"`. Verificar que scrollWidth == clientWidth a 320/360/390/414.",
+    "MEDIUM — Aplicar de verdad el fix de LegalPage. En /app/frontend/src/pages/LegalPage.jsx línea 410: cambiar `flex items-center gap-5` por `flex flex-wrap items-center gap-3 sm:gap-5` (o esconder etiquetas con menú <sm). Verificar scrollWidth == clientWidth a 320/360 en /terminos, /privacidad y /uso-ia.",
+    "LOW — Añadir data-testid al <nav> legal (por ejemplo `legal-nav`) para facilitar el audit."
+  ],
+  "critical_code_review_comments": [
+    "El agente principal reportó haber arreglado ambos overflows, pero el código fuente de ComplaintsPage.jsx y LegalPage.jsx NO contiene las clases claves (`min-w-0`, `truncate`, `flex-wrap`). Las métricas DOM coinciden pixel-a-pixel con las de iteración 25, lo que confirma que no hubo cambio efectivo.",
+    "ComplaintsPage SelectTrigger sigue siendo `w-full` sin `min-w-0` — en CSS grid/flex el default `min-width: auto` hace que el contenido intrínseco del label largo (~460px) force a crecer la columna; la clase `w-full` no sirve de nada si la columna puede crecer.",
+    "LegalPage header nav no usa `flex-wrap`, por lo que cualquier contenido total > viewport provoca overflow — es un patrón repetible que debería revisarse en otras barras del sitio."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "responsive_fixes_requested": "0/2 (ninguno aplicado)",
+    "resto_pages_visual_review": "100% sin hallazgos"
+  },
+  "test_credentials": "Admin: admin@onbuysolutions.com / OnBuy2026!; Cliente: cliente.prueba@ejemplo.com / Cliente2026!",
+  "seed_data_creation": "Ninguna. No se creó/envió reclamo, ni mensajes al agente IA, ni casos nuevos. Solo se abrió el Select y se cerró con Escape.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Los dos overflows reportados en iter25 siguen presentes con exactamente las mismas métricas (scrollWidth 505 en /libro-de-reclamaciones; 379–383 en LegalPage). El fix no se aplicó al código. Para re-test rápido: visitar las 3 páginas a 320 y 360, y verificar `document.documentElement.scrollWidth === clientWidth`. El resto de las páginas (home, auditorías, asesoría legal, blog, acceso) y los paneles (cliente, admin 14 tabs) están limpios visualmente a 360/768/1024/1366 — no vale la pena repetir esa parte.",
+  "rca of the issue": "El main agent claim 'se corrigieron los 2 desbordes' no corresponde al código commiteado. Inspección de /app/frontend/src/pages/ComplaintsPage.jsx (líneas 213, 223) y /app/frontend/src/pages/LegalPage.jsx (línea 410) muestra que no se añadieron ni `min-w-0`, ni `truncate`, ni `flex-wrap`. Métricas DOM idénticas a iter25 lo confirman."
+}
