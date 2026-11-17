@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration 21 — Verificación de las 8 correcciones de seguridad y bugs reportados (BUG 1..8 + rate limits + IDs inválidos + settings). 18/18 pruebas backend pasan. BUG 1 (análisis IA de auditoría) NO re-ejecutado para ahorrar saldo de LLM; el flujo y los endpoints están correctos por revisión de código (streaming, actualización del campo analysis, PDF descarga requiere analysis no vacío). Smoke de frontend OK: landing pública, login admin y cliente, panel cliente muestra solo Consultoría. BUG 6 verificado por grep en AuditDetail.jsx: 0 ocurrencias de payment-locked-banner / open-payment-dialog-btn.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "security.rate_limit",
+        "issue": "El límite usa request.client.host; detrás del ingress de Kubernetes puede corresponder al peer directo (la IP del proxy) o variar por conexión. Con `requests.Session()` (keep-alive) el límite dispara correctamente tras 5 hits; con conexiones nuevas en cada POST, distintos pods de ingress pueden hacer que la cuenta se reparta y nunca alcance 5. Recomendación: honrar X-Forwarded-For / X-Real-IP (y configurar un proxy de confianza) para que el límite sea efectivo desde clientes reales."
+      },
+      {
+        "endpoint": "PUT /api/admin/contacts/{id}/read",
+        "issue": "Con ObjectId inválido devuelve 422 porque la validación del body corre antes del parseo de la ruta. No es 500 (OK, no regresión), pero podría mejorar devolviendo 404 primero."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration21_security.py",
+    "/app/test_reports/pytest/iter21.xml"
+  ],
+  "action_items": [
+    "(opcional) Honrar X-Forwarded-For en security.rate_limit; de lo contrario los límites por IP son evadibles desde el ingress (ver 'minor' arriba).",
+    "(opcional) Migrar on_event startup/shutdown a lifespan handlers de FastAPI (deprecation warnings)."
+  ],
+  "critical_code_review_comments": [
+    "routes/complaints.py download_complaint_receipt: valida token con hmac.compare_digest y cae a require_admin si no hay token válido; implementación correcta (BUG 2 ✓).",
+    "routes/payments.py capture_order: usa find_one_and_update con filtro status != completed para hacer la concesión atómica — garantiza que grant_case_purchase se ejecute UNA sola vez por orden (BUG 3 ✓). Además rechaza explícitamente item_type != 'case' con 400.",
+    "consulting.py _reserve_message: usa $expr con $lt(messages_used, messages_limit) en update_one — la atomicidad verificada con 5 llamadas concurrentes (exactamente 1 éxito). _refund_message devuelve el mensaje en 3 rutas (chat vacío, imagen con excepción, imagen sin resultado). BUG 4 ✓.",
+    "routes/public._contact_notification_html y routes/complaints._consumer_email_html / _admin_email_html: escapan HTML con html.escape antes de interpolar — probado con <b>, <script>, <a href> y <img onerror> (BUG 5 ✓).",
+    "pages/AuditDetail.jsx: 0 ocurrencias de payment-locked-banner / open-payment-dialog-btn (BUG 6 ✓).",
+    "server.py startup: migración actualiza con filtro {payment_status: autorizada, owner_role != admin, user_id != null, messages_limit not exists} aplicando cfg.chat_messages y messages_used=0 (BUG 7 ✓).",
+    "consulting._serialize_case: expone message_count, messages_with_files, pending_manual, cost_cap_reached y messages_left correctamente; cost_cap_reached es True solo si payment_status autorizada, hay mensajes restantes y spent >= budget (BUG 8 ✓).",
+    "routes/public.public_settings: ya no incluye price_consulting; incluye price_small y price_medium (regresión ✓).",
+    "server.py admin seed: si ADMIN_PASSWORD no está definido, no crea admin (solo warning) y no resetea a usuarios existentes salvo que su password_changed_at sea null y no coincida.",
+    "BUG 1 (audit AI analysis): routes/audits.analyze_audit implementa streaming correcto: acumula chunks, detecta DOCUMENTOS_FALTANTES, actualiza audit.analysis + status=completada; GET /audits/{id}/report valida analysis no vacío. No re-ejecutado para ahorrar saldo LLM; recomendar al main_agent validarlo UNA vez por UI."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration21_security.py (nuevo, 18 pruebas)"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18)",
+    "frontend": "Smoke completado: landing + login admin/cliente + verificación por código de BUG 6"
+  },
+  "test_credentials": "admin@onbuysolutions.com / OnBuy2026! · cliente.prueba@ejemplo.com / Cliente2026! (ambos intactos).",
+  "seed_data_creation": "Todos los documentos TEST_ creados (reclamos, casos legacy/costcap/bug3/bug4, pagos de prueba) se eliminan en teardown. El reclamo generado por la prueba de rate-limit de contactos (TEST_RL) queda en db.contacts (no se puede saber su id); si molesta, filtrar por name='TEST_RL' manualmente. No se tocó ninguna configuración.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "El único hallazgo real es menor: rate_limit usa request.client.host y es evadible tras ingress salvo que se mantenga keep-alive. BUG 1 (análisis IA de auditoría end-to-end) no se re-ejecutó; está validado por revisión y por el endpoint de reporte PDF. Para BUG 3/4 se usaron pytest in-process (httpx+ASGITransport) con monkeypatch de httpx y de la lógica atómica de _reserve_message. El cliente.prueba conserva dos casos TEST preexistentes (deuda autorizada 63 msgs y segundo pendiente_pago 0 msgs) — no fueron tocados.",
+  "rca of the issue": "N/A — todas las correcciones previas (iter19/iter20) verificadas sin regresiones. Único punto de atención: rate_limit por IP depende de peer TCP y pierde efectividad sin X-Forwarded-For."
+}

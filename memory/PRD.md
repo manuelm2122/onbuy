@@ -109,3 +109,14 @@ Sistema de auditorías a condominios en Perú usando la IA de Google más avanza
   - ASESORÍA autoservicio por mensajes: settings price_chat_usd 15.99 / chat_messages 60 / price_extra_usd 7.99 / extra_messages 30 / trial_messages 3 (una vez por cuenta: users.trial_used) / consulting_budget_usd = tope interno de costo IA por chat (proporcional en paquetes extra) / bank_account_pen, bank_account_usd (FICTICIAS). Caso: messages_limit, messages_used, payment_status prueba|pendiente_pago|autorizada. consulting.py: _quota_left, _require_usable (402 CASE_NOT_PAID / QUOTA_EXHAUSTED), _count_message (chat e imagen cuentan 1; informe final no cuenta, exige pago).
   - Pagos: routes/payments.py case_offer, grant_case_purchase, GET /payments/case-offer/{id}, POST /payments/manual (PEN o USD, referencia MAN-XXXX, status pending_manual), POST /payments/manual/{id}/approve|reject (admin, en pestaña Pagos). PayPal cobra USD del plan. PaymentDialog.jsx reescrito (solo casos).
   - NO probado: PayPal real con los nuevos montos (sin credenciales en preview); botón contact-to-client en UI (no había mensajes), solo API.
+
+- [x] Correcciones de la auditoría de seguridad y código (2026-11, testing iteration_21: 18/18 backend; análisis de auditoría con IA real verificado por curl con el proveedor emergent):
+  - routes/audits.py: eliminadas clases de relleno; usa gemini_chat (el análisis salía vacío). Análisis vacío ahora marca error.
+  - Constancia de reclamo: receipt_token aleatorio por reclamo (?token=) o sesión admin. Reclamos antiguos sin token: solo admin.
+  - PayPal capture atómico (find_one_and_update status != completed). Flujo de pago de auditorías eliminado (create-order solo 'case').
+  - Cupo: consulting._reserve_message (reserva atómica con $expr antes de llamar a la IA) y _refund_message si no hay respuesta.
+  - html.escape en correos de contacto, reclamos y pago. security.rate_limit en memoria por IP (contact 5/10min, complaints 5/h, forgot y resend-code 5/15min, register 10/h).
+  - server.py: handler InvalidId → 404; sin contraseña admin por defecto (requiere ADMIN_PASSWORD para sembrar); migración de casos pagados antiguos sin messages_limit.
+  - _case_stats: conteos y pagos pendientes en lote; cost_cap_reached en el caso. AuditDetail sin banner de pago.
+  - backend/uploads/ en .gitignore y fuera del índice de git (historial NO purgado).
+  - PENDIENTE en el VPS (configuración, no código): CORS_ORIGINS con los dominios reales en backend/.env.
