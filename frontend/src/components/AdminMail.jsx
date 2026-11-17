@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Inbox, Send, PenSquare, RefreshCw, Reply, Trash2, Paperclip, ArrowLeft, MailOpen, Download } from "lucide-react";
+import { Inbox, Send, PenSquare, RefreshCw, Reply, Trash2, Paperclip, ArrowLeft, MailOpen, Download, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
 import { MailComposer } from "@/components/MailComposer";
@@ -13,6 +13,19 @@ const frameDoc = (html) =>
 
 const MailReader = ({ mail, onBack, onReply, onDelete, onUnread }) => {
   const inbound = mail.direction === "inbound";
+  const toClient = async () => {
+    const m = mail.from_address.match(/^\s*"?([^"<]*)"?\s*<([^>]+)>/);
+    const email = (m ? m[2] : mail.from_address).trim();
+    try {
+      const { data } = await api.post("/admin/audit-clients", {
+        full_name: (m && m[1].trim()) || email, email, source: "correo",
+        notes: `Correo recibido — ${mail.subject}: ${(mail.text || "").slice(0, 1500)}`,
+      });
+      toast.success(data.already_existed ? "Ya existía una ficha con ese correo" : "Ficha creada en Clientes auditoría");
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
+    }
+  };
   const download = async (att) => {
     try {
       const res = await api.get(`/admin/mail/${mail.id}/attachments/${att.id}`, { responseType: "blob" });
@@ -38,6 +51,7 @@ const MailReader = ({ mail, onBack, onReply, onDelete, onUnread }) => {
               <button onClick={onReply} data-testid="mail-reply-btn" className="inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-5 py-2 rounded-full text-sm transition-colors">
                 <Reply size={15} /> Responder
               </button>
+              <button onClick={toClient} title="Crear ficha de cliente de auditoría" data-testid="mail-to-client-btn" className="p-2 text-slate-400 hover:text-[#0284C7] transition-colors"><UserPlus size={17} /></button>
               <button onClick={onUnread} title="Marcar como no leído" data-testid="mail-unread-btn" className="p-2 text-slate-400 hover:text-[#0284C7] transition-colors"><MailOpen size={17} /></button>
             </>
           )}

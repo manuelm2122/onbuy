@@ -35,6 +35,7 @@ import { AdminComplaints } from "@/components/AdminComplaints";
 import { AdminPayments } from "@/components/AdminPayments";
 import { AdminBlog } from "@/components/AdminBlog";
 import { AdminMail } from "@/components/AdminMail";
+import { AdminAuditClients } from "@/components/AdminAuditClients";
 
 const SAMPLE_CATS = {
   estado_cuenta: "Estado de cuenta",
@@ -81,6 +82,9 @@ export default function Panel() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [mailUnread, setMailUnread] = useState(0);
+  const isAdmin = user?.role === "admin";
+  const [tab, setTab] = useState(isAdmin ? "resumen" : "consultoria");
+  const [openCaseId, setOpenCaseId] = useState(null);
   const [audits, setAudits] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -207,12 +211,12 @@ export default function Panel() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
           <div>
             <h1 className="font-heading font-black text-3xl tracking-tight text-[#0F172A]" data-testid="panel-title">
-              Panel de auditorías
+              {isAdmin ? "Panel de administración" : "Mi asesoría legal y contable"}
             </h1>
-            <p className="text-slate-500 text-sm mt-1">Gestiona tus condominios y sus auditorías con IA.</p>
+            <p className="text-slate-500 text-sm mt-1">{isAdmin ? "Clientes, auditorías, asesorías y contenido del sitio." : "Consulta con el agente y gestiona tus casos."}</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger asChild className={isAdmin ? "" : "hidden"}>
               <button
                 data-testid="new-audit-btn"
                 className="inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-6 py-3 rounded-full text-sm transition-colors"
@@ -286,17 +290,23 @@ export default function Panel() {
           </Dialog>
         </div>
 
-        <Tabs defaultValue="resumen">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="bg-white border border-slate-200 p-1 h-auto flex-wrap justify-start">
+            {isAdmin && (
             <TabsTrigger value="resumen" data-testid="tab-resumen" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
               Resumen
             </TabsTrigger>
+            )}
+            {isAdmin && (
             <TabsTrigger value="auditorias" data-testid="tab-auditorias" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
               Auditorías
             </TabsTrigger>
+            )}
+            {isAdmin && (
             <TabsTrigger value="ejemplos" data-testid="tab-ejemplos" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
               Archivos de ejemplo
             </TabsTrigger>
+            )}
             {user?.role === "admin" && (
               <TabsTrigger value="autorizaciones" data-testid="tab-autorizaciones-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
                 Autorizaciones
@@ -310,9 +320,14 @@ export default function Panel() {
             <TabsTrigger value="consultoria" data-testid="tab-consultoria" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
               Consultoría
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="clientes-auditoria" data-testid="tab-clientes-auditoria-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
+                Clientes auditoría
+              </TabsTrigger>
+            )}
             {user?.role === "admin" && (
               <TabsTrigger value="clientes" data-testid="tab-clientes-admin" className="px-6 py-2.5 text-sm data-[state=active]:bg-[#0F172A] data-[state=active]:text-white">
-                Clientes
+                Usuarios
               </TabsTrigger>
             )}
             {user?.role === "admin" && (
@@ -508,8 +523,13 @@ export default function Panel() {
             </TabsContent>
           )}
           <TabsContent value="consultoria" className="mt-8">
-            <AdminConsulting />
+            <AdminConsulting openCaseId={openCaseId} />
           </TabsContent>
+          {isAdmin && (
+            <TabsContent value="clientes-auditoria" className="mt-8">
+              <AdminAuditClients onOpenCase={(id) => { setOpenCaseId(id); setTab("consultoria"); }} />
+            </TabsContent>
+          )}
           {user?.role === "admin" && (
             <TabsContent value="clientes" className="mt-8">
               <AdminUsers />

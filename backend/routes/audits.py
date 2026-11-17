@@ -48,6 +48,8 @@ router = APIRouter()
 @router.post("/audits", response_model=Audit, response_model_by_alias=False)
 async def create_audit(data: AuditCreate, user: dict = Depends(get_current_user)):
     is_admin = user.get("role") == "admin"
+    if not is_admin:
+        raise HTTPException(status_code=403, detail="Las auditorías se gestionan con nuestro equipo. Escríbenos por WhatsApp o desde el formulario de contacto.")
     audit = Audit(
         user_id=user["_id"],
         condominium_name=data.condominium_name.strip(),
@@ -56,6 +58,7 @@ async def create_audit(data: AuditCreate, user: dict = Depends(get_current_user)
         period=data.period.strip(),
         purpose=data.purpose,
         notes=data.notes,
+        client_id=data.client_id,
         payment_status="autorizada" if is_admin else "pendiente_pago",
         authorized_at=datetime.now(timezone.utc).isoformat() if is_admin else None,
         created_at=datetime.now(timezone.utc).isoformat(),

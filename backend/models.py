@@ -87,6 +87,7 @@ class AuditCreate(BaseModel):
     period: str = Field(min_length=2)
     purpose: Optional[str] = None
     notes: Optional[str] = None
+    client_id: Optional[str] = None
 
 
 class DocumentOut(BaseDocument):
@@ -137,10 +138,22 @@ class SettingsInput(BaseModel):
     vertex_location: Optional[str] = None
     whatsapp_enabled: Optional[bool] = None
     mail_addresses: Optional[str] = None
+    price_chat_usd: Optional[float] = Field(default=None, gt=0)
+    chat_messages: Optional[int] = Field(default=None, gt=0)
+    price_extra_usd: Optional[float] = Field(default=None, gt=0)
+    extra_messages: Optional[int] = Field(default=None, gt=0)
+    trial_messages: Optional[int] = Field(default=None, ge=0)
+    bank_account_pen: Optional[str] = None
+    bank_account_usd: Optional[str] = None
     forward_email: Optional[str] = None
     resend_webhook_secret: Optional[str] = None
     whatsapp_number: Optional[str] = None
     whatsapp_message: Optional[str] = None
+
+
+class ManualPaymentInput(BaseModel):
+    item_id: str
+    currency: str = "PEN"
 
 
 class CreateOrderInput(BaseModel):

@@ -160,11 +160,11 @@ export default function AuthPage() {
         <div className="max-w-md">
           <ShieldCheck size={40} className="text-[#0EA5E9]" strokeWidth={1.5} />
           <h1 className="font-heading font-black text-4xl tracking-tight mt-8 leading-tight">
-            Transparencia total para tu condominio
+            Tu asesoría legal y contable, en un solo lugar
           </h1>
           <p className="text-slate-400 mt-6 leading-relaxed">
-            Sube tus documentos, deja que la IA de Google haga la auditoría y descarga un informe
-            profesional con valor legal. Todo desde un solo panel.
+            Consulta con el agente, sube tus documentos y obtén escritos listos para usar. Prueba gratis
+            al crear tu cuenta.
           </p>
         </div>
         <p className="text-xs text-slate-600">

@@ -38,7 +38,7 @@ const CASES = [
 ];
 
 const STEPS = [
-  ["Abre tu caso", "Crea tu cuenta, describe tu situación y activa el caso con un pago único."],
+  ["Abre tu chat", "Crea tu cuenta, describe tu situación y prueba el agente gratis antes de habilitar el chat."],
   ["Sube tus documentos", "Contratos, mensajes, vouchers o resoluciones. Todo queda en tu expediente."],
   ["Recibe análisis y documentos", "Estrategia clara y escritos listos para descargar, firmar o llevar a tu abogado."],
   ["Haz seguimiento", "Registra cada novedad y obtén un informe final al cerrar el caso."],
@@ -51,14 +51,14 @@ const PREVIEWS = [
 ];
 
 export default function LegalService() {
-  const [price, setPrice] = useState(30);
+  const [cfg, setCfg] = useState({ price_chat_usd: 15.99, chat_messages: 60, price_extra_usd: 7.99, extra_messages: 30, trial_messages: 3 });
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    api.get("/public/settings").then(({ data }) => setPrice(data.price_consulting)).catch(() => {});
+    api.get("/public/settings").then(({ data }) => setCfg((c) => ({ ...c, ...data }))).catch(() => {});
   }, []);
 
-  const priceLabel = `S/ ${Number(price).toLocaleString("es-PE")}`;
+  const priceLabel = `US$ ${Number(cfg.price_chat_usd).toFixed(2)}`;
 
   return (
     <div className="bg-[#020617] text-slate-100 min-h-screen" data-testid="legal-service-page">
@@ -83,7 +83,7 @@ export default function LegalService() {
             </motion.p>
             <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={3} className="mt-10 flex flex-col sm:flex-row gap-4">
               <Link to="/acceso" data-testid="legal-hero-cta" className="inline-flex items-center justify-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-8 py-4 rounded-full text-base transition-colors">
-                Abrir mi caso por {priceLabel} <ArrowRight size={18} />
+                {cfg.trial_messages > 0 ? `Probar gratis (${cfg.trial_messages} mensajes)` : `Abrir mi chat por ${priceLabel}`} <ArrowRight size={18} />
               </Link>
               <a href="#casos" data-testid="legal-hero-secondary" className="inline-flex items-center justify-center gap-2 border border-slate-600 hover:border-slate-300 text-slate-200 font-semibold px-8 py-4 rounded-full text-base transition-colors">
                 Ver casos que resolvemos
@@ -168,12 +168,14 @@ export default function LegalService() {
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
           <div>
             <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white max-w-2xl" data-testid="legal-price">
-              {priceLabel} por caso. Sin mensualidades.
+              {priceLabel} por chat habilitado. Sin mensualidades.
             </h2>
-            <p className="text-sky-100 mt-3 max-w-2xl text-sm leading-relaxed">
-              Cada pago incluye un amplio paquete de uso para tu caso. Si lo agotas, recargas por el mismo precio y
-              continúas en el mismo expediente. Esta asesoría es orientación informativa y no reemplaza el patrocinio
-              de un abogado colegiado en un proceso judicial.
+            <p className="text-sky-100 mt-3 max-w-2xl text-sm leading-relaxed" data-testid="legal-price-detail">
+              Cada chat incluye {cfg.chat_messages} mensajes con el agente (o su equivalente en soles al tipo de cambio del día).
+              {cfg.trial_messages > 0 ? ` Al crear tu cuenta puedes probarlo gratis con ${cfg.trial_messages} mensajes.` : ""} Si
+              necesitas más, agregas {cfg.extra_messages} mensajes por US$ {Number(cfg.price_extra_usd).toFixed(2)} y sigues en el
+              mismo caso. Paga con PayPal (activación inmediata) o por depósito o transferencia en soles o dólares. Esta
+              asesoría es orientación informativa y no reemplaza el patrocinio de un abogado colegiado en un proceso judicial.
             </p>
           </div>
           <Link to="/acceso" data-testid="legal-pricing-cta" className="inline-flex items-center gap-2 bg-[#020617] hover:bg-slate-900 text-white font-semibold px-8 py-4 rounded-full transition-colors shrink-0">

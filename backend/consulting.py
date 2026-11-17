@@ -291,20 +291,30 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             raise HTTPException(status_code=404, detail="Caso no encontrado")
         return case_doc
 
-    def _require_usable(case_doc: dict, user: dict):
+    def _quota_left(case_doc: dict) -> int:
+        left = int(case_doc.get("messages_limit", 0) or 0) - int(case_doc.get("messages_used", 0) or 0)
+        paid = case_doc.get("payment_status") == "autorizada"
+        if paid and (case_doc.get("spent_usd", 0.0) or 0.0) >= (case_doc.get("budget_usd") or 0.0):
+            return 0
+        return max(0, left)
+
+    def _require_usable(case_doc: dict, user: dict, counts: bool = True):
         if _is_admin(user):
             return
-        if case_doc.get("payment_status") != "autorizada":
+        paid = case_doc.get("payment_status") == "autorizada"
+        if not paid and (not counts or _quota_left(case_doc) <= 0):
             raise HTTPException(status_code=402, detail={
-                "msg": "Esta consulta está pendiente de pago. Actívala con PayPal para comenzar a usar la IA.",
+                "msg": "Este chat aún no está habilitado. Actívalo para seguir consultando con el agente.",
                 "error_code": "CASE_NOT_PAID",
             })
-        budget = case_doc.get("budget_usd") or 0.0
-        if case_doc.get("spent_usd", 0.0) >= budget:
+        if counts and _quota_left(case_doc) <= 0:
             raise HTTPException(status_code=402, detail={
-                "msg": "Alcanzaste el límite de uso incluido en tu pago. Recarga tu consulta para seguir trabajando en este mismo caso.",
-                "error_code": "BUDGET_EXHAUSTED",
+                "msg": "Usaste todos los mensajes de este chat. Agrega un paquete adicional para continuar en el mismo caso.",
+                "error_code": "QUOTA_EXHAUSTED",
             })
+
+    async def _count_message(case_id: str):
+        await db.cases.update_one({"_id": ObjectId(case_id)}, {"$inc": {"messages_used": 1}})
 
     async def _track_usage(case_id: str, cost_usd: float):
         if cost_usd > 0:
@@ -350,12 +360,24 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "spent_usd": None if is_admin_case else round(c.get("spent_usd", 0.0) or 0.0, 4),
             "owner_email": c.get("owner_email"),
             "is_admin_case": is_admin_case,
+            "client_id": c.get("client_id"),
+            "messages_limit": None if is_admin_case else int(c.get("messages_limit", 0) or 0),
+            "messages_used": None if is_admin_case else int(c.get("messages_used", 0) or 0),
+            "messages_left": None if is_admin_case else _quota_left(c),
+            "pending_manual": False if is_admin_case else bool(await db.payments.find_one({"item_id": cid, "status": "pending_manual"})),
         }
 
     @router.post("")
     async def create_case(data: CaseCreate, user: dict = Depends(get_current_user)):
         now = datetime.now(timezone.utc).isoformat()
         admin = _is_admin(user)
+        trial = 0
+        if not admin:
+            cfg = await get_app_settings()
+            claimed = await db.users.find_one_and_update(
+                {"_id": ObjectId(user["_id"]), "trial_used": {"$ne": True}}, {"$set": {"trial_used": True}}
+            )
+            trial = int(cfg["trial_messages"]) if claimed else 0
         doc = {
             "title": data.title.strip(),
             "description": (data.description or "").strip(),
@@ -363,9 +385,11 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "user_id": user["_id"],
             "owner_email": user["email"],
             "owner_role": user.get("role", "cliente"),
-            "payment_status": "autorizada" if admin else "pendiente_pago",
+            "payment_status": "autorizada" if admin else ("prueba" if trial else "pendiente_pago"),
             "budget_usd": None if admin else 0.0,
             "spent_usd": 0.0,
+            "messages_limit": trial,
+            "messages_used": 0,
             "created_at": now,
             "updated_at": now,
         }
@@ -529,6 +553,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                 )
                 case_doc["memoria"] = memoria
                 await _track_usage(case_id, cost)
+                await _count_message(case_id)
             except Exception as e:
                 logger.error(f"Error guardando respuesta de consultoría: {e}")
             if stream_error:
@@ -587,13 +612,14 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         })
         await db.cases.update_one({"_id": ObjectId(case_id)}, {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
         await _track_usage(case_id, IMAGE_GEN_COST_USD)
+        await _count_message(case_id)
         msg = await db.case_messages.find_one({"_id": result.inserted_id})
         return _serialize_message(msg)
 
     @router.post("/{case_id}/final-report")
     async def generate_final_report(case_id: str, user: dict = Depends(get_current_user)):
         case_doc = await _get_case(case_id, user)
-        _require_usable(case_doc, user)
+        _require_usable(case_doc, user, counts=False)
         msgs = await db.case_messages.find({"case_id": case_id}).sort("created_at", 1).to_list(1000)
         if not msgs:
             raise HTTPException(status_code=400, detail="El caso no tiene conversación aún; no hay expediente que informar")

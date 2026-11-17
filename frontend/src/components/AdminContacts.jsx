@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Inbox, Mail, MailOpen, Phone, Trash2, Loader2 } from "lucide-react";
+import { Inbox, Mail, MailOpen, Phone, Trash2, Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
 
@@ -33,6 +33,18 @@ export const AdminContacts = () => {
       toast.error(formatApiErrorDetail(err.response?.data?.detail));
     } finally {
       setActing(null);
+    }
+  };
+
+  const toClient = async (c) => {
+    try {
+      const { data } = await api.post("/admin/audit-clients", {
+        full_name: c.name, email: c.email, phone: c.phone || "", source: "formulario",
+        notes: `Mensaje del formulario${c.service ? ` (${c.service})` : ""}: ${c.message}`,
+      });
+      toast.success(data.already_existed ? "Ya existía una ficha con ese correo" : "Ficha creada en Clientes auditoría");
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
     }
   };
 
@@ -117,6 +129,15 @@ export const AdminContacts = () => {
                     className="text-slate-400 hover:text-[#0284C7] disabled:opacity-40 transition-colors p-2"
                   >
                     {c.read ? <Mail size={16} /> : <MailOpen size={16} />}
+                  </button>
+                  <button
+                    onClick={() => toClient(c)}
+                    disabled={acting === c.id}
+                    title="Crear ficha de cliente de auditoría"
+                    data-testid={`contact-to-client-${c.id}`}
+                    className="p-2 text-slate-400 hover:text-[#0284C7] transition-colors"
+                  >
+                    <UserPlus size={16} />
                   </button>
                   <button
                     onClick={() => remove(c)}

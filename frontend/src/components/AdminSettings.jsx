@@ -47,8 +47,14 @@ export const AdminSettings = () => {
         ai_model: s.ai_model,
         price_small: parseFloat(s.price_small) || 1100,
         price_medium: parseFloat(s.price_medium) || 2100,
-        price_consulting: parseFloat(s.price_consulting) || 30,
-        consulting_budget_usd: parseFloat(s.consulting_budget_usd) || 3.5,
+        consulting_budget_usd: parseFloat(s.consulting_budget_usd) || 6,
+        price_chat_usd: parseFloat(s.price_chat_usd) || 15.99,
+        chat_messages: parseInt(s.chat_messages, 10) || 60,
+        price_extra_usd: parseFloat(s.price_extra_usd) || 7.99,
+        extra_messages: parseInt(s.extra_messages, 10) || 30,
+        trial_messages: Math.max(0, parseInt(s.trial_messages, 10) || 0),
+        bank_account_pen: s.bank_account_pen || "",
+        bank_account_usd: s.bank_account_usd || "",
         contact_email: s.contact_email,
         empresa_razon_social: s.empresa_razon_social,
         empresa_ruc: s.empresa_ruc,
@@ -260,8 +266,14 @@ export const AdminSettings = () => {
             <Input label="Email de contacto" field="contact_email" value={s.contact_email} onChange={set} />
             <Input label="Precio plan pequeño (S/, <50 dptos.)" field="price_small" value={s.price_small} onChange={set} />
             <Input label="Precio plan mediano-grande (S/, 50-150)" field="price_medium" value={s.price_medium} onChange={set} />
-            <Input label="Precio consulta legal IA (S/)" field="price_consulting" value={s.price_consulting} onChange={set} hint="Precio por consulta y por cada recarga" />
-            <Input label="Uso de IA incluido por pago (USD)" field="consulting_budget_usd" value={s.consulting_budget_usd} onChange={set} hint="Presupuesto en tokens Gemini que incluye cada pago de consulta" />
+            <Input label="Precio por chat (US$)" field="price_chat_usd" value={s.price_chat_usd} onChange={set} hint="Asesoría legal y contable: precio de cada chat habilitado" />
+            <Input label="Mensajes incluidos por chat" field="chat_messages" value={s.chat_messages} onChange={set} />
+            <Input label="Precio paquete adicional (US$)" field="price_extra_usd" value={s.price_extra_usd} onChange={set} />
+            <Input label="Mensajes del paquete adicional" field="extra_messages" value={s.extra_messages} onChange={set} />
+            <Input label="Mensajes de prueba gratis" field="trial_messages" value={s.trial_messages} onChange={set} hint="Una sola vez por cuenta, en su primer chat. 0 = sin prueba" />
+            <Input label="Tope interno de costo de IA por chat (US$)" field="consulting_budget_usd" value={s.consulting_budget_usd} onChange={set} hint="Seguro contra casos muy pesados: si el costo real de IA llega a este monto, el chat pide paquete adicional aunque queden mensajes. Sugerido: 6" />
+            <Input label="Cuenta bancaria en soles" field="bank_account_pen" value={s.bank_account_pen} onChange={set} hint="Se muestra al cliente que paga por depósito o transferencia" />
+            <Input label="Cuenta bancaria en dólares" field="bank_account_usd" value={s.bank_account_usd} onChange={set} />
           </div>
         </div>
 

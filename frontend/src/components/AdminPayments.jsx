@@ -9,13 +9,27 @@ const fmtDate = (iso) =>
 const STATUS_META = {
   completed: { label: "Pagado", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   created: { label: "Sin completar", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  pending_manual: { label: "Por aprobar", cls: "bg-orange-50 text-orange-700 border-orange-200" },
+  rejected: { label: "Rechazado", cls: "bg-slate-100 text-slate-600 border-slate-200" },
 };
 
-const PLAN_LABELS = { small: "Pequeño", medium: "Mediano-grande" };
+const PLAN_LABELS = { small: "Pequeño", medium: "Mediano-grande", chat: "Chat", extra: "Mensajes adicionales", consulting: "Consulta" };
 
 export const AdminPayments = () => {
   const [payments, setPayments] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const resolve = async (p, action) => {
+    const verb = action === "approve" ? "Aprobar" : "Rechazar";
+    if (!window.confirm(`¿${verb} el pago ${p.order_id} de ${p.user_email}?`)) return;
+    try {
+      const { data } = await api.post(`/payments/manual/${p.id}/${action}`);
+      toast.success(data.message);
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "No se pudo procesar");
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -124,6 +138,17 @@ export const AdminPayments = () => {
                         </span>
                         {p.paypal_mode === "sandbox" && (
                           <span className="block text-[9px] text-amber-600 mt-1">sandbox</span>
+                        )}
+                        {p.method === "manual" && (
+                          <span className="block text-[10px] text-slate-500 mt-1" data-testid={`payment-manual-info-${p.id}`}>
+                            Depósito/transf. · {p.currency === "PEN" ? "S/" : "US$"} {Number(p.amount).toFixed(2)}
+                          </span>
+                        )}
+                        {p.status === "pending_manual" && (
+                          <span className="flex gap-2 mt-2">
+                            <button onClick={() => resolve(p, "approve")} data-testid={`payment-approve-${p.id}`} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors">Aprobar</button>
+                            <button onClick={() => resolve(p, "reject")} data-testid={`payment-reject-${p.id}`} className="border border-slate-300 hover:border-red-400 hover:text-red-600 text-slate-600 text-[10px] font-semibold px-2.5 py-1 rounded-full transition-colors">Rechazar</button>
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3.5 hidden lg:table-cell">

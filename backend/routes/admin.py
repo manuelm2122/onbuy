@@ -239,6 +239,10 @@ async def admin_list_payments(user: dict = Depends(get_current_user)):
             "payer_email": d.get("payer_email"),
             "created_at": d.get("created_at"),
             "captured_at": d.get("captured_at"),
+            "method": d.get("method", "paypal"),
+            "currency": d.get("currency", "USD"),
+            "amount": d.get("amount"),
+            "messages": d.get("messages"),
         })
     return out
 

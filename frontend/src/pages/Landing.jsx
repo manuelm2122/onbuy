@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -16,7 +15,6 @@ import {
   Video,
 } from "lucide-react";
 import { FaqSection } from "@/components/FaqSection";
-import { api } from "@/lib/api";
 import { SiteFooter } from "@/components/SiteFooter";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ContactSection } from "@/components/ContactSection";
@@ -38,12 +36,12 @@ const fadeUp = {
 const steps = [
   {
     icon: Upload,
-    title: "Sube tus documentos",
-    desc: "Facturas, estados de cuenta bancarios, recibos, actas y presupuestos. Aceptamos PDF, imágenes, Excel y CSV.",
+    title: "Cuéntanos tu caso y envía tus documentos",
+    desc: "Un asesor te contacta, te cotiza y recibe tus facturas, estados de cuenta, recibos, actas y presupuestos (PDF, imágenes, Excel o CSV).",
   },
   {
     icon: BrainCircuit,
-    title: "La IA audita todo",
+    title: "Nuestro equipo audita con IA",
     desc: "Google Gemini, la IA más avanzada, cruza cada documento: concilia cuentas, detecta duplicados, pagos sin sustento e irregularidades.",
   },
   {
@@ -87,15 +85,6 @@ const features = [
 ];
 
 export default function Landing() {
-  const [pricing, setPricing] = useState({ price_small: 1100, price_medium: 2100 });
-
-  useEffect(() => {
-    api
-      .get("/public/settings")
-      .then(({ data }) => setPricing(data))
-      .catch(() => {});
-  }, []);
-
   return (
     <div className="bg-[#020617] text-slate-100 min-h-screen">
       {/* NAV */}
@@ -108,17 +97,17 @@ export default function Landing() {
             <Link to="/" className="hover:text-white transition-colors" data-testid="nav-link-inicio">Todos los servicios</Link>
             <a href="#como-funciona" className="hover:text-white transition-colors" data-testid="nav-link-como-funciona">Cómo funciona</a>
             <a href="#servicios" className="hover:text-white transition-colors" data-testid="nav-link-servicios">Servicios</a>
-            <a href="#precios" className="hover:text-white transition-colors" data-testid="nav-link-precios">Precios</a>
+            <a href="#precios" className="hover:text-white transition-colors" data-testid="nav-link-precios">Cotización</a>
             <a href="#faq" className="hover:text-white transition-colors" data-testid="nav-link-faq">FAQ</a>
             <a href="#contacto" className="hover:text-white transition-colors" data-testid="nav-link-contacto">Contacto</a>
           </div>
-          <Link
-            to="/acceso"
-            data-testid="nav-login-btn"
+          <a
+            href="#contacto"
+            data-testid="nav-quote-btn"
             className="bg-[#0284C7] hover:bg-[#0EA5E9] text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors"
           >
-            Acceder al panel
-          </Link>
+            Solicitar cotización
+          </a>
         </div>
       </nav>
 
@@ -168,13 +157,13 @@ export default function Landing() {
               custom={3}
               className="mt-10 flex flex-col sm:flex-row gap-4"
             >
-              <Link
-                to="/acceso"
+              <a
+                href="#contacto"
                 data-testid="hero-cta-btn"
                 className="inline-flex items-center justify-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-8 py-4 rounded-full text-base transition-colors"
               >
-                Comenzar mi auditoría <ArrowRight size={18} />
-              </Link>
+                Solicitar cotización <ArrowRight size={18} />
+              </a>
               <a
                 href="#como-funciona"
                 data-testid="hero-secondary-btn"
@@ -298,121 +287,39 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* PRECIOS */}
-      <section id="precios" className="bg-[#020617] py-24 lg:py-32 grain relative">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 relative">
-          <p className="text-xs tracking-[0.3em] uppercase text-[#0EA5E9] font-semibold mb-4">Precios</p>
-          <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white max-w-2xl">
-            Tarifas claras, por año auditado
-          </h2>
-          <p className="text-slate-400 mt-4 max-w-xl text-sm leading-relaxed">
-            Un pago único por cada año de documentación procesada: estados de cuenta bancarios,
-            facturas y recibos de mantenimiento.
-          </p>
-          <div className="mt-14 grid md:grid-cols-2 gap-8 max-w-4xl">
-            {[
-              {
-                name: "Condominio pequeño",
-                target: "Menos de 50 departamentos",
-                price: Number(pricing.price_small).toLocaleString("es-PE"),
-                unit: "por año auditado",
-                features: [
-                  "Procesamiento de 12 meses de estados bancarios y recibos",
-                  "Análisis completo con IA: duplicados, faltantes e irregularidades",
-                  "Informe PDF profesional con valor legal y código de verificación",
-                  "Hallazgos clasificados por severidad + recomendaciones",
-                ],
-                bonus: { icon: Video, text: "GRATIS: 1 hora de consultoría legal-contable por Zoom con tu auditoría.", cls: "emerald" },
-                cta: "Solicitar auditoría",
-                testid: "pricing-card-pequeno",
-                featured: false,
-              },
-              {
-                name: "Condominio mediano a grande",
-                target: "De 50 a 150 departamentos",
-                price: Number(pricing.price_medium).toLocaleString("es-PE"),
-                unit: "por año auditado",
-                features: [
-                  "Procesamiento de 12 meses de estados bancarios y recibos",
-                  "Análisis completo con IA: duplicados, faltantes e irregularidades",
-                  "Informe PDF profesional con valor legal y código de verificación",
-                  "Hallazgos clasificados por severidad + recomendaciones",
-                ],
-                bonus: { icon: Video, text: "GRATIS: 1 hora de consultoría legal-contable por Zoom con tu auditoría.", cls: "emerald" },
-                cta: "Solicitar auditoría",
-                testid: "pricing-card-mediano",
-                featured: true,
-              },
-            ].map((p, i) => (
-              <motion.div
-                key={p.name}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: "-60px" }}
-                custom={i}
-                data-testid={p.testid}
-                className={`relative p-8 lg:p-10 border transition-colors ${
-                  p.featured
-                    ? "border-[#0EA5E9] bg-slate-900/70"
-                    : "border-slate-700 bg-slate-900/40 hover:border-slate-500"
-                }`}
-              >
-                {p.featured && (
-                  <span className="absolute -top-3 left-8 bg-[#0284C7] text-white text-[10px] font-bold tracking-[0.2em] uppercase px-3 py-1 rounded-full">
-                    Más solicitado
-                  </span>
-                )}
-                <h3 className="font-heading font-bold text-lg text-white">{p.name}</h3>
-                <p className="text-xs text-slate-400 mt-1">{p.target}</p>
-                <div className="mt-6 flex items-baseline gap-2">
-                  <span className="font-heading font-black text-5xl text-white">
-                    <span className="text-2xl align-top text-[#0EA5E9]">S/ </span>
-                    {p.price}
-                  </span>
-                  <span className="text-xs text-slate-400">{p.unit}</span>
-                </div>
-                <ul className="mt-8 space-y-3">
-                  {p.features.map((feat) => (
-                    <li key={feat} className="flex items-start gap-3 text-sm text-slate-300">
-                      <CheckCircle2 className="text-[#0EA5E9] shrink-0 mt-0.5" size={16} />
-                      {feat}
-                    </li>
-                  ))}
-                </ul>
-                <div
-                  className={`mt-6 border px-4 py-3 flex items-start gap-3 rounded ${
-                    p.bonus.cls === "emerald" ? "bg-emerald-500/10 border-emerald-500/30" : "bg-sky-500/10 border-sky-500/30"
-                  }`}
-                  data-testid={`${p.testid}-bonus`}
-                >
-                  <p.bonus.icon className={`shrink-0 mt-0.5 ${p.bonus.cls === "emerald" ? "text-emerald-400" : "text-[#0EA5E9]"}`} size={16} />
-                  <p className={`text-xs leading-relaxed ${p.bonus.cls === "emerald" ? "text-emerald-300" : "text-sky-300"}`}>
-                    {p.bonus.cls === "emerald" ? <b>GRATIS: </b> : null}
-                    {p.bonus.text.replace("GRATIS: ", "")}
-                  </p>
-                </div>
-                <Link
-                  to="/acceso"
-                  data-testid={`${p.testid}-cta`}
-                  className={`mt-10 inline-flex w-full items-center justify-center gap-2 font-semibold px-6 py-3.5 rounded-full text-sm transition-colors ${
-                    p.featured
-                      ? "bg-[#0284C7] hover:bg-[#0EA5E9] text-white"
-                      : "border border-slate-600 hover:border-slate-300 text-slate-200"
-                  }`}
-                >
-                  {p.cta} <ArrowRight size={16} />
-                </Link>
-              </motion.div>
-            ))}
+      {/* COTIZACIÓN */}
+      <section id="precios" className="bg-[#020617] py-24 lg:py-32 grain relative" data-testid="audit-quote-section">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 relative grid lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <p className="text-xs tracking-[0.3em] uppercase text-[#0EA5E9] font-semibold mb-4">Cómo contratar</p>
+            <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white max-w-xl">
+              Un asesor te acompaña en todo el proceso
+            </h2>
+            <p className="text-slate-400 mt-5 max-w-xl text-sm leading-relaxed">
+              Cada condominio es distinto y la mayoría de casos requiere asesoramiento legal. Por eso no vendemos
+              la auditoría como autoservicio: nos cuentas tu situación, te cotizamos según el tamaño del condominio
+              y los años a revisar, y nuestro equipo gestiona la auditoría de principio a fin.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-4">
+              <a href="#contacto" data-testid="audit-quote-cta" className="inline-flex items-center justify-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-8 py-4 rounded-full text-sm transition-colors">
+                Solicitar cotización <ArrowRight size={16} />
+              </a>
+            </div>
+            <p className="mt-4 text-xs text-slate-500">También puedes escribirnos por WhatsApp con el botón verde.</p>
           </div>
-          <p className="mt-10 text-sm text-slate-400" data-testid="pricing-custom-note">
-            ¿Más de 150 departamentos o varios años por auditar?{" "}
-            <a href="#contacto" className="text-[#0EA5E9] font-semibold hover:underline">
-              Solicita una cotización personalizada
-            </a>
-            .
-          </p>
+          <ul className="space-y-4">
+            {[
+              "Evaluación inicial de tu caso sin compromiso",
+              "Cotización según número de departamentos y años a auditar",
+              "Recolección y revisión de documentos con tu asesor",
+              "Informe de auditoría en PDF con hallazgos y sustento",
+              "Asesoramiento legal sobre los pasos a seguir",
+            ].map((t, i) => (
+              <li key={t} className="flex items-start gap-3 border border-slate-800 bg-slate-900/40 p-5 text-sm text-slate-300" data-testid={`audit-quote-item-${i}`}>
+                <CheckCircle2 className="text-[#0EA5E9] shrink-0 mt-0.5" size={18} /> {t}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -427,13 +334,13 @@ export default function Landing() {
               Obtén claridad hoy mismo con una auditoría completa impulsada por IA.
             </p>
           </div>
-          <Link
-            to="/acceso"
+          <a
+            href="#contacto"
             data-testid="cta-banner-btn"
             className="inline-flex items-center gap-2 bg-[#020617] hover:bg-slate-900 text-white font-semibold px-8 py-4 rounded-full transition-colors shrink-0"
           >
-            Crear cuenta gratis <ArrowRight size={18} />
-          </Link>
+            Hablar con un asesor <ArrowRight size={18} />
+          </a>
         </div>
       </section>
 

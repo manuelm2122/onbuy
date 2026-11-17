@@ -17,6 +17,7 @@ from routes.complaints import router as complaints_router
 from routes.payments import router as payments_router
 from routes.blog import router as blog_router, seed_blog
 from routes.mail import router as mail_router
+from routes.audit_clients import router as audit_clients_router
 
 app = FastAPI(title="OnBuySolutions API")
 
@@ -30,6 +31,7 @@ api_router.include_router(complaints_router)
 api_router.include_router(payments_router)
 api_router.include_router(blog_router)
 api_router.include_router(mail_router)
+api_router.include_router(audit_clients_router)
 api_router.include_router(create_consulting_router(db, get_current_user, get_app_settings, UPLOAD_DIR))
 app.include_router(api_router)
 
