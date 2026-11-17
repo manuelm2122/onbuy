@@ -1,0 +1,21 @@
+{
+  "name": "OnBuySolutions",
+  "short_name": "OnBuy",
+  "description": "Asesoría legal y contable con IA, auditorías de condominios y soluciones QR en el Perú.",
+  "lang": "es-PE",
+  "start_url": "/panel",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Mis casos", "url": "/panel", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Asesoría legal", "url": "/asesoria-legal", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

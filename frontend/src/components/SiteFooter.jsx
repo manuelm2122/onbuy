@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { SERVICES } from "@/constants/services";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 export const SiteFooter = () => (
   <footer className="bg-[#020617] border-t border-slate-800 py-14 text-slate-100" data-testid="site-footer">
@@ -12,6 +13,7 @@ export const SiteFooter = () => (
           Servicios digitales para personas y negocios en el Perú: inteligencia artificial, asesoría
           legal-contable y soluciones QR.
         </p>
+        <InstallAppButton className="mt-5 border border-slate-700 hover:border-[#0EA5E9] hover:text-white text-xs text-slate-300 px-4 py-2 rounded-full" />
         <p className="text-xs text-slate-600 mt-4">© {new Date().getFullYear()} OnBuySolutions · Perú</p>
       </div>
       <div className="md:col-span-5">

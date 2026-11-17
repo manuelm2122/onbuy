@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { InstallAppButton } from "@/components/InstallAppButton";
 import {
   Building2,
   FileText,
@@ -184,11 +185,12 @@ export default function Panel() {
     <div className="themeable min-h-screen bg-[#F8FAFC]">
       {/* Header */}
       <header className="bg-[#020617] text-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-2">
           <Link to="/" onClick={() => window.scrollTo(0, 0)} className="font-heading font-black text-lg tracking-tight" data-testid="panel-logo">
             OnBuy<span className="text-[#0EA5E9]">Solutions</span>
           </Link>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-2.5 sm:gap-5">
+            <InstallAppButton className="text-xs text-slate-300 hover:text-white border border-slate-700 hover:border-[#0EA5E9] px-3 py-1.5 rounded-full" />
             <ThemeToggle onDark />
             <span className="text-sm text-slate-300 hidden sm:block" data-testid="panel-user-name">
               {user?.name}
