@@ -63,35 +63,12 @@ async def get_pen_usd_rate() -> float:
         raise HTTPException(status_code=503, detail="No se pudo obtener el tipo de cambio del día. Intenta nuevamente en unos minutos.")
 
 
-def _plan_amount_pen(cfg: dict, plan: str) -> float:
-    if plan == "consulting":
-        return float(cfg["price_consulting"])
-    return float(cfg["price_small"] if plan == "small" else cfg["price_medium"])
-
-
 @router.get("/config")
 async def payment_config(user: dict = Depends(get_current_user)):
     cfg = await get_app_settings()
     if not cfg.get("paypal_client_id"):
         raise HTTPException(status_code=503, detail="Los pagos con PayPal no están configurados.")
     return {"client_id": cfg["paypal_client_id"], "mode": cfg["paypal_mode"], "currency": "USD"}
-
-
-@router.get("/quote")
-async def payment_quote(plan: str, user: dict = Depends(get_current_user)):
-    if plan not in PLAN_LABELS:
-        raise HTTPException(status_code=400, detail="Plan inválido")
-    cfg = await get_app_settings()
-    rate = await get_pen_usd_rate()
-    amount_pen = _plan_amount_pen(cfg, plan)
-    amount_usd = round(amount_pen * rate, 2)
-    return {
-        "plan": plan,
-        "plan_label": PLAN_LABELS[plan],
-        "amount_pen": amount_pen,
-        "amount_usd": amount_usd,
-        "rate_pen_per_usd": round(1 / rate, 4) if rate else None,
-    }
 
 
 async def _own_case(case_id: str, user: dict) -> dict:
@@ -222,32 +199,15 @@ async def create_order(data: CreateOrderInput, user: dict = Depends(get_current_
     cfg = await get_app_settings()
     is_recharge = False
 
-    if data.item_type == "audit":
-        if data.plan not in ("small", "medium"):
-            raise HTTPException(status_code=400, detail="Plan inválido")
-        plan = data.plan
-        audit = await db.audits.find_one({"_id": ObjectId(data.item_id), "user_id": user["_id"]})
-        if not audit:
-            raise HTTPException(status_code=404, detail="Auditoría no encontrada")
-        if audit.get("payment_status") == "autorizada":
-            raise HTTPException(status_code=400, detail="Esta auditoría ya está activada. No es necesario pagar de nuevo.")
-        description = f"Auditoría IA — {audit['condominium_name']} ({audit['period']})"
-        concept = audit["condominium_name"]
-    elif data.item_type == "case":
-        case = await _own_case(data.item_id, user)
-        offer = await case_offer(cfg, case)
-        plan, is_recharge, messages = offer["plan"], offer["plan"] == "extra", offer["messages"]
-        description = f"Asesoría legal y contable — {case['title']}" + (" (mensajes adicionales)" if is_recharge else "")
-        concept = case["title"]
-    else:
-        raise HTTPException(status_code=400, detail="Tipo de compra inválido")
-
+    if data.item_type != "case":
+        raise HTTPException(status_code=400, detail="Las auditorías se gestionan con nuestro equipo; no se pagan en línea.")
+    case = await _own_case(data.item_id, user)
+    offer = await case_offer(cfg, case)
+    plan, is_recharge, messages = offer["plan"], offer["plan"] == "extra", offer["messages"]
+    description = f"Asesoría legal y contable — {case['title']}" + (" (mensajes adicionales)" if is_recharge else "")
+    concept = case["title"]
     rate = await get_pen_usd_rate()
-    if data.item_type == "case":
-        amount_usd, amount_pen = offer["amount_usd"], offer["amount_pen"]
-    else:
-        amount_pen = _plan_amount_pen(cfg, plan)
-        amount_usd = round(amount_pen * rate, 2)
+    amount_usd, amount_pen = offer["amount_usd"], offer["amount_pen"]
 
     token = await _paypal_token(cfg)
     body = {
@@ -278,7 +238,7 @@ async def create_order(data: CreateOrderInput, user: dict = Depends(get_current_
         "user_id": user["_id"],
         "user_email": user["email"],
         "plan": plan,
-        "messages": messages if data.item_type == "case" else None,
+        "messages": messages,
         "method": "paypal",
         "amount_pen": amount_pen,
         "exchange_rate_usd_per_pen": rate,
@@ -314,7 +274,7 @@ async def capture_order(order_id: str, background_tasks: BackgroundTasks, user: 
     if not pay:
         raise HTTPException(status_code=404, detail="Orden de pago no encontrada")
     if pay.get("status") == "completed":
-        return {"message": "El pago ya fue procesado y tu auditoría está activada.", "already_captured": True}
+        return {"message": "El pago ya fue procesado.", "already_captured": True}
 
     cfg = await get_app_settings()
     token = await _paypal_token(cfg)
@@ -340,10 +300,12 @@ async def capture_order(order_id: str, background_tasks: BackgroundTasks, user: 
     payer_email = data.get("payer", {}).get("email_address")
     now = datetime.now(timezone.utc).isoformat()
 
-    await db.payments.update_one(
-        {"_id": pay["_id"]},
+    claimed = await db.payments.find_one_and_update(
+        {"_id": pay["_id"], "status": {"$ne": "completed"}},
         {"$set": {"status": "completed", "capture_id": capture_id, "payer_email": payer_email, "captured_at": now}},
     )
+    if not claimed:
+        return {"message": "El pago ya fue procesado.", "already_captured": True}
 
     item_type = pay.get("item_type", "audit")
     item_id = pay.get("item_id") or pay.get("audit_id")
@@ -358,7 +320,7 @@ async def capture_order(order_id: str, background_tasks: BackgroundTasks, user: 
                 if pay.get("is_recharge")
                 else "recibimos tu pago vía PayPal y tu consulta legal-contable quedó <b>activada automáticamente</b>. Ya puedes chatear con el consultor IA desde tu panel."
             )
-            rows = f'<tr style="background:#F8FAFC;"><td><b>Consulta</b></td><td>{case["title"]}</td></tr>'
+            rows = f'<tr style="background:#F8FAFC;"><td><b>Consulta</b></td><td>{html.escape(case["title"])}</td></tr>'
             background_tasks.add_task(
                 send_email,
                 user["email"],
@@ -368,28 +330,4 @@ async def capture_order(order_id: str, background_tasks: BackgroundTasks, user: 
         msg = "¡Pago exitoso! Tu consulta fue recargada." if pay.get("is_recharge") else "¡Pago exitoso! Tu consulta fue activada automáticamente."
         return {"message": msg, "capture_id": capture_id}
 
-    await db.audits.update_one(
-        {"_id": ObjectId(item_id)},
-        {"$set": {
-            "payment_status": "autorizada",
-            "authorized_at": now,
-            "authorized_by": f"PayPal ({capture_id})",
-        }},
-    )
-    logger.info(f"Pago PayPal completado: {capture_id} — auditoría {item_id} activada")
-
-    audit = await db.audits.find_one({"_id": ObjectId(item_id)})
-    if audit:
-        intro = "recibimos tu pago vía PayPal y tu auditoría quedó <b>activada automáticamente</b>. Ya puedes ejecutar el análisis con IA desde tu panel."
-        rows = (
-            f'<tr style="background:#F8FAFC;"><td><b>Condominio</b></td><td>{audit["condominium_name"]}</td></tr>'
-            f'<tr><td><b>Período</b></td><td>{audit["period"]}</td></tr>'
-            f'<tr style="background:#F8FAFC;"><td><b>Plan</b></td><td>{PLAN_LABELS.get(pay["plan"], pay["plan"])}</td></tr>'
-        )
-        background_tasks.add_task(
-            send_email,
-            user["email"],
-            f"Pago confirmado — Auditoría {audit['condominium_name']} activada",
-            _payment_email_html(user.get("name", ""), rows, pay, capture_id, intro),
-        )
-    return {"message": "¡Pago exitoso! Tu auditoría fue activada automáticamente.", "capture_id": capture_id}
+    return {"message": "Pago registrado.", "capture_id": capture_id}

@@ -16,13 +16,13 @@ from pydantic import BaseModel, Field
 
 from ai_engine import build_chat
 
-from gemini_chat import LlmChat, UserMessage, FileContentWithMimeType, TextDelta, StreamDone
+from gemini_chat import UserMessage, FileContentWithMimeType, TextDelta, StreamDone
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors as rl_colors
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
+from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable, Table, TableStyle
 
 logger = logging.getLogger(__name__)
@@ -313,8 +313,23 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                 "error_code": "QUOTA_EXHAUSTED",
             })
 
-    async def _count_message(case_id: str):
-        await db.cases.update_one({"_id": ObjectId(case_id)}, {"$inc": {"messages_used": 1}})
+    async def _reserve_message(case_doc: dict, user: dict):
+        if _is_admin(user):
+            return
+        _require_usable(case_doc, user)
+        used, limit = {"$ifNull": ["$messages_used", 0]}, {"$ifNull": ["$messages_limit", 0]}
+        result = await db.cases.update_one(
+            {"_id": case_doc["_id"], "$expr": {"$lt": [used, limit]}}, {"$inc": {"messages_used": 1}}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=402, detail={
+                "msg": "Usaste todos los mensajes de este chat. Agrega un paquete adicional para continuar en el mismo caso.",
+                "error_code": "QUOTA_EXHAUSTED",
+            })
+
+    async def _refund_message(case_id: str, user: dict):
+        if not _is_admin(user):
+            await db.cases.update_one({"_id": ObjectId(case_id), "messages_used": {"$gt": 0}}, {"$inc": {"messages_used": -1}})
 
     async def _track_usage(case_id: str, cost_usd: float):
         if cost_usd > 0:
@@ -340,10 +355,23 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "created_at": m["created_at"],
         }
 
-    async def _serialize_case(c: dict) -> dict:
+    async def _case_stats(case_ids: List[str]) -> dict:
+        rows = await db.case_messages.aggregate([
+            {"$match": {"case_id": {"$in": case_ids}}},
+            {"$group": {
+                "_id": "$case_id",
+                "msgs": {"$sum": 1},
+                "files": {"$sum": {"$cond": [{"$gt": [{"$size": {"$ifNull": ["$attachments", []]}}, 0]}, 1, 0]}},
+            }},
+        ]).to_list(len(case_ids) or 1)
+        pending = await db.payments.distinct("item_id", {"item_id": {"$in": case_ids}, "status": "pending_manual"})
+        return {"counts": {r["_id"]: r for r in rows}, "pending": set(pending)}
+
+    async def _serialize_case(c: dict, stats: dict = None) -> dict:
         cid = str(c["_id"])
-        msgs = await db.case_messages.count_documents({"case_id": cid})
-        files = await db.case_messages.count_documents({"case_id": cid, "attachments.0": {"$exists": True}})
+        stats = stats or await _case_stats([cid])
+        count = stats["counts"].get(cid, {})
+        msgs, files = count.get("msgs", 0), count.get("files", 0)
         is_admin_case = c.get("user_id") is None or c.get("owner_role") == "admin"
         return {
             "id": cid,
@@ -364,7 +392,12 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             "messages_limit": None if is_admin_case else int(c.get("messages_limit", 0) or 0),
             "messages_used": None if is_admin_case else int(c.get("messages_used", 0) or 0),
             "messages_left": None if is_admin_case else _quota_left(c),
-            "pending_manual": False if is_admin_case else bool(await db.payments.find_one({"item_id": cid, "status": "pending_manual"})),
+            "pending_manual": False if is_admin_case else cid in stats["pending"],
+            "cost_cap_reached": bool(
+                not is_admin_case and c.get("payment_status") == "autorizada"
+                and int(c.get("messages_limit", 0) or 0) > int(c.get("messages_used", 0) or 0)
+                and (c.get("spent_usd", 0.0) or 0.0) >= (c.get("budget_usd") or 0.0)
+            ),
         }
 
     @router.post("")
@@ -402,7 +435,8 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
     async def list_cases(user: dict = Depends(get_current_user)):
         query = {} if _is_admin(user) else {"user_id": user["_id"]}
         docs = await db.cases.find(query).sort("updated_at", -1).to_list(500)
-        return [await _serialize_case(c) for c in docs]
+        stats = await _case_stats([str(c["_id"]) for c in docs])
+        return [await _serialize_case(c, stats) for c in docs]
 
     @router.get("/{case_id}")
     async def get_case(case_id: str, user: dict = Depends(get_current_user)):
@@ -504,6 +538,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         prompt_text = text.strip() or "Analiza los archivos adjuntos e intégralos al expediente del caso."
 
         cfg = await get_app_settings()
+        await _reserve_message(case_doc, user)
         chat = build_chat(
             cfg,
             session_id=f"case-{case_id}",
@@ -553,9 +588,10 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                 )
                 case_doc["memoria"] = memoria
                 await _track_usage(case_id, cost)
-                await _count_message(case_id)
             except Exception as e:
                 logger.error(f"Error guardando respuesta de consultoría: {e}")
+            if not answer.strip():
+                await _refund_message(case_id, user)
             if stream_error:
                 yield f"\n\n[ERROR] La respuesta se interrumpió: {stream_error}"
 
@@ -568,7 +604,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
     @router.post("/{case_id}/generate-image")
     async def generate_case_image(case_id: str, data: ImageGenInput, user: dict = Depends(get_current_user)):
         case_doc = await _get_case(case_id, user)
-        _require_usable(case_doc, user)
+        await _reserve_message(case_doc, user)
         case_dir = cases_dir / case_id
         case_dir.mkdir(exist_ok=True)
         cfg = await get_app_settings()
@@ -582,8 +618,10 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             text, images = await chat.send_message_multimodal_response(UserMessage(text=data.prompt))
         except Exception as e:
             logger.error(f"Error generando imagen: {e}")
+            await _refund_message(case_id, user)
             raise HTTPException(status_code=502, detail=f"No se pudo generar la imagen: {str(e)}")
         if not images:
+            await _refund_message(case_id, user)
             raise HTTPException(status_code=502, detail="El modelo no devolvió ninguna imagen. Reformula el prompt.")
         img = images[0]
         ext = ".png" if "png" in (img.get("mime_type") or "image/png") else ".jpg"
@@ -612,7 +650,6 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         })
         await db.cases.update_one({"_id": ObjectId(case_id)}, {"$set": {"updated_at": datetime.now(timezone.utc).isoformat()}})
         await _track_usage(case_id, IMAGE_GEN_COST_USD)
-        await _count_message(case_id)
         msg = await db.case_messages.find_one({"_id": result.inserted_id})
         return _serialize_message(msg)
 

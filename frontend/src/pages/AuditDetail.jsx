@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { PaymentDialog } from "@/components/PaymentDialog";
 import {
   ArrowLeft,
   UploadCloud,
@@ -13,11 +12,9 @@ import {
   Download,
   LogOut,
   AlertTriangle,
-  Lock,
   ClipboardList,
   CheckCircle2,
   Loader2,
-  CreditCard,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -59,7 +56,6 @@ export default function AuditDetail() {
   const [docs, setDocs] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [payOpen, setPayOpen] = useState(false);
   const [streamText, setStreamText] = useState("");
   const [downloading, setDownloading] = useState(false);
   const fileRef = useRef(null);
@@ -381,29 +377,6 @@ export default function AuditDetail() {
                 </button>
               </div>
 
-              {audit.payment_status !== "autorizada" && (
-                <div className="px-6 py-5 bg-orange-50 border-b border-orange-100" data-testid="payment-locked-banner">
-                  <div className="flex items-start gap-3">
-                    <Lock className="text-orange-600 shrink-0 mt-0.5" size={16} />
-                    <div className="flex-1">
-                      <p className="text-xs text-orange-800 leading-relaxed">
-                        Esta auditoría está <b>pendiente de pago</b>. Actívala ahora mismo pagando con PayPal
-                        (S/ 1,100 para condominios de menos de 50 dptos. · S/ 2,100 de 50 a 150 dptos., cobro
-                        en USD al tipo de cambio del día) y el análisis con IA se habilitará automáticamente.
-                        Mientras tanto puedes ir subiendo tus documentos.
-                      </p>
-                      <button
-                        onClick={() => setPayOpen(true)}
-                        data-testid="open-payment-dialog-btn"
-                        className="mt-3 inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-5 py-2.5 rounded-full text-xs transition-colors"
-                      >
-                        <CreditCard size={14} /> Pagar con PayPal y activar ahora
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {analyzing && (
                 <div className="px-6 py-3 bg-sky-50 border-b border-sky-100 flex items-center gap-3" data-testid="analyzing-indicator">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#0284C7] analyzing-dot" />
@@ -502,7 +475,6 @@ export default function AuditDetail() {
           </TabsContent>
         </Tabs>
       </main>
-      <PaymentDialog itemType="audit" item={audit} open={payOpen} onOpenChange={setPayOpen} onPaid={load} />
     </div>
   );
 }

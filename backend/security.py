@@ -1,3 +1,4 @@
+import time
 import os
 from datetime import datetime, timezone, timedelta
 
@@ -82,3 +83,21 @@ async def record_failed_attempt(identifier: str):
         {"$inc": {"count": 1}, "$set": {"last_attempt": datetime.now(timezone.utc).isoformat()}},
         upsert=True,
     )
+
+
+_rate_hits: dict = {}
+
+
+def rate_limit(name: str, limit: int, window: int):
+    async def dependency(request: Request):
+        ip = request.client.host if request.client else "desconocido"
+        now = time.monotonic()
+        hits = [t for t in _rate_hits.get((name, ip), []) if now - t < window]
+        if len(hits) >= limit:
+            raise HTTPException(status_code=429, detail="Demasiados intentos. Espera unos minutos y vuelve a intentarlo.")
+        hits.append(now)
+        _rate_hits[(name, ip)] = hits
+        if len(_rate_hits) > 5000:
+            for key in [k for k, v in _rate_hits.items() if not v or now - v[-1] > 3600]:
+                _rate_hits.pop(key, None)
+    return dependency

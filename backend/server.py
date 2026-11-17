@@ -1,9 +1,11 @@
-from core import ROOT_DIR, db, client, logger, SAMPLES_DIR, UPLOAD_DIR, get_app_settings
+from core import db, client, logger, SAMPLES_DIR, UPLOAD_DIR, get_app_settings
 
 import os
 from datetime import datetime, timezone
 
+from bson.errors import InvalidId
 from fastapi import FastAPI, APIRouter
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
 from security import hash_password, verify_password, get_current_user
@@ -44,6 +46,11 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(InvalidId)
+async def invalid_id_handler(request, exc):
+    return JSONResponse(status_code=404, content={"detail": "Recurso no encontrado"})
+
+
 @app.on_event("startup")
 async def startup():
     await db.users.create_index("email", unique=True)
@@ -68,9 +75,12 @@ async def startup():
         {"$set": {"email_verified": True}},
     )
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@onbuysolutions.com")
-    admin_password = os.environ.get("ADMIN_PASSWORD", "OnBuy2026!")
+    admin_password = os.environ.get("ADMIN_PASSWORD")
     existing = await db.users.find_one({"email": admin_email})
-    if existing is None:
+    if not admin_password:
+        if existing is None:
+            logger.warning("ADMIN_PASSWORD no está definido en backend/.env: no se creó el usuario administrador")
+    elif existing is None:
         await db.users.insert_one({
             "email": admin_email,
             "password_hash": hash_password(admin_password),
@@ -81,6 +91,11 @@ async def startup():
         logger.info("Admin user seeded")
     elif not existing.get("password_changed_at") and not verify_password(admin_password, existing["password_hash"]):
         await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_password(admin_password)}})
+    cfg = await get_app_settings()
+    await db.cases.update_many(
+        {"payment_status": "autorizada", "owner_role": {"$ne": "admin"}, "user_id": {"$ne": None}, "messages_limit": {"$exists": False}},
+        {"$set": {"messages_limit": int(cfg["chat_messages"]), "messages_used": 0}},
+    )
 
 
 @app.on_event("shutdown")

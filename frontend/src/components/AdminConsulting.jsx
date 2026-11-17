@@ -626,6 +626,8 @@ export const AdminConsulting = ({ openCaseId }) => {
                 ? `Prueba gratis: te quedan ${left} mensaje${left === 1 ? "" : "s"}. Habilita el chat para continuar sin límites de prueba.`
                 : !paid
                   ? "Tu prueba gratis terminó. Habilita este chat para seguir consultando con el agente."
+                  : selected.cost_cap_reached
+                    ? "Este chat alcanzó su límite de uso por el volumen de documentos procesados. Agrega un paquete adicional para continuar en el mismo caso."
                   : left <= 0
                     ? "Usaste todos los mensajes de este chat. Agrega un paquete adicional para continuar en el mismo caso."
                     : low

@@ -117,7 +117,7 @@ export default function ComplaintsPage() {
             </div>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
-                href={`${BACKEND_URL}/api/complaints/${result.id}/receipt`}
+                href={`${BACKEND_URL}/api/complaints/${result.id}/receipt?token=${result.receipt_token}`}
                 data-testid="complaint-download-receipt"
                 className="inline-flex items-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold px-7 py-3 rounded-full text-sm transition-colors"
               >

@@ -21,6 +21,7 @@ from security import (
     create_refresh_token,
     set_auth_cookies,
     get_current_user,
+    rate_limit,
     check_brute_force,
     record_failed_attempt,
 )
@@ -113,7 +114,7 @@ async def _issue_verification_code(user_doc: dict, background_tasks: BackgroundT
     )
 
 
-@router.post("/register")
+@router.post("/register", dependencies=[Depends(rate_limit("register", 10, 3600))])
 async def register(data: RegisterInput, background_tasks: BackgroundTasks):
     if not data.accepted_terms:
         raise HTTPException(status_code=400, detail="Debes aceptar los Términos y Condiciones y la Política de Privacidad")
@@ -173,7 +174,7 @@ async def verify_email(data: VerifyEmailInput, response: Response, background_ta
     return {"id": user_id, "email": email, "name": user["name"], "role": user.get("role", "cliente")}
 
 
-@router.post("/resend-code")
+@router.post("/resend-code", dependencies=[Depends(rate_limit("resend", 5, 900))])
 async def resend_code(data: ResendCodeInput, background_tasks: BackgroundTasks):
     email = data.email.lower().strip()
     user = await db.users.find_one({"email": email})
@@ -238,7 +239,7 @@ def _reset_email_html(name: str, code: str) -> str:
         </p>""")
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=[Depends(rate_limit("forgot", 5, 900))])
 async def forgot_password(data: ForgotPasswordInput, background_tasks: BackgroundTasks):
     email = data.email.lower().strip()
     generic = {"message": "Si el correo está registrado, te enviamos un código para restablecer tu contraseña."}

@@ -1,28 +1,3 @@
-
-class LlmChat:
-    def __init__(self, *args, **kwargs):
-        raise RuntimeError("IA emergent no disponible")
-    async def send_message(self, *args, **kwargs):
-        raise RuntimeError("IA emergent no disponible")
-    def send_message_stream(self, *args, **kwargs):
-        raise RuntimeError("IA emergent no disponible")
-        yield None
-
-class UserMessage:
-    def __init__(self, *args, **kwargs):
-        self.text = args[0] if args else kwargs.get("text")
-
-class FileContentWithMimeType:
-    def __init__(self, *args, **kwargs):
-        pass
-
-class TextDelta:
-    def __init__(self, *args, **kwargs):
-        self.content = kwargs.get("content", "")
-
-class StreamDone:
-    pass
-
 import re
 import uuid
 import shutil
@@ -39,6 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from core import db, logger, get_app_settings, UPLOAD_DIR, SAMPLES_DIR, SAMPLE_META, MAX_FILE_SIZE, EXT_MIME, CATEGORY_LABELS
 from models import Audit, AuditCreate, DocumentOut
 from security import get_current_user
+from gemini_chat import UserMessage, TextDelta, StreamDone
 from ai_engine import AUDIT_SYSTEM_PROMPT, prepare_file_contents, classify_uploaded_documents, build_chat
 from pdf_report import build_audit_pdf
 
@@ -218,6 +194,8 @@ Genera el informe completo siguiendo la estructura exacta indicada."""
                 elif isinstance(ev, StreamDone):
                     break
             analysis = "".join(chunks)
+            if not analysis.strip():
+                raise RuntimeError("la IA no devolvió contenido")
             missing = []
             found = re.findall(r"\**DOCUMENTOS_FALTANTES:?\**:?\s*(.+)", analysis)
             if found:

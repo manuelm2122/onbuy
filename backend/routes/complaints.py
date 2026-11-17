@@ -1,9 +1,11 @@
-import re
+import hmac
+import html
+import secrets
 from io import BytesIO
 from datetime import datetime, timezone, timedelta
 
 from bson import ObjectId
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from reportlab.lib.pagesizes import A4
@@ -15,7 +17,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable,
 
 from core import db, logger, get_app_settings
 from models import ComplaintInput, ComplaintStatusInput
-from security import get_current_user, require_admin
+from security import get_current_user, require_admin, rate_limit
 from email_service import send_email
 
 router = APIRouter()
@@ -172,6 +174,7 @@ def build_complaint_pdf(c: dict) -> bytes:
 
 
 def _consumer_email_html(c: dict, created_display: str) -> str:
+    c = {k: html.escape(v) if isinstance(v, str) else v for k, v in c.items()}
     return f"""
 <table width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif; background:#F1F5F9; padding:24px 0;">
   <tr><td align="center">
@@ -210,6 +213,7 @@ def _consumer_email_html(c: dict, created_display: str) -> str:
 
 
 def _admin_email_html(c: dict, created_display: str) -> str:
+    c = {k: html.escape(v) if isinstance(v, str) else v for k, v in c.items()}
     return f"""
 <table width="100%" cellpadding="0" cellspacing="0" style="font-family: Arial, sans-serif;">
   <tr><td>
@@ -283,7 +287,7 @@ def _serialize(d: dict) -> dict:
     }
 
 
-@router.post("/complaints")
+@router.post("/complaints", dependencies=[Depends(rate_limit("complaints", 5, 3600))])
 async def create_complaint(data: ComplaintInput, background_tasks: BackgroundTasks):
     if not data.accepted_declaration:
         raise HTTPException(status_code=400, detail="Debes aceptar la declaración para registrar tu solicitud")
@@ -311,6 +315,7 @@ async def create_complaint(data: ComplaintInput, background_tasks: BackgroundTas
         "code": code,
         "website": PROVIDER["web"],
         "status": "pendiente",
+        "receipt_token": secrets.token_urlsafe(24),
         "created_at": now.isoformat(),
         "due_date": due.isoformat(),
         "due_date_display": due.strftime("%d/%m/%Y"),
@@ -318,11 +323,13 @@ async def create_complaint(data: ComplaintInput, background_tasks: BackgroundTas
     doc.pop("accepted_declaration", None)
     doc["declaration_accepted_at"] = now.isoformat()
     result = await db.complaints.insert_one(doc)
+    receipt_token = doc["receipt_token"]
     complaint = _serialize(await db.complaints.find_one({"_id": result.inserted_id}))
     background_tasks.add_task(_send_complaint_emails, complaint)
     logger.info(f"Reclamo registrado: {code}")
     return {
         "id": complaint["id"],
+        "receipt_token": receipt_token,
         "code": code,
         "created_at": complaint["created_at"],
         "due_date_display": complaint["due_date_display"],
@@ -331,11 +338,14 @@ async def create_complaint(data: ComplaintInput, background_tasks: BackgroundTas
 
 
 @router.get("/complaints/{complaint_id}/receipt")
-async def download_complaint_receipt(complaint_id: str):
+async def download_complaint_receipt(complaint_id: str, request: Request, token: str = ""):
     try:
         doc = await db.complaints.find_one({"_id": ObjectId(complaint_id)})
     except Exception:
         doc = None
+    stored = (doc or {}).get("receipt_token")
+    if not (stored and token and hmac.compare_digest(token, stored)):
+        require_admin(await get_current_user(request))
     if not doc:
         raise HTTPException(status_code=404, detail="Reclamo no encontrado")
     pdf_bytes = build_complaint_pdf(_serialize(doc))

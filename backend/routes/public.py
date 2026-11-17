@@ -1,6 +1,9 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks
+import html
+
+from fastapi import APIRouter, BackgroundTasks, Depends
+from security import rate_limit
 
 from core import db, get_app_settings
 from models import ContactInput
@@ -10,6 +13,7 @@ router = APIRouter()
 
 
 def _contact_notification_html(doc: dict) -> str:
+    doc = {k: html.escape(v) if isinstance(v, str) else v for k, v in doc.items()}
     return f"""
 <div style="font-family: Arial, sans-serif;">
   <h2 style="color:#0F172A; font-size:16px;">Nuevo mensaje de contacto</h2>
@@ -35,7 +39,7 @@ async def _notify_contact(doc: dict):
     )
 
 
-@router.post("/contact")
+@router.post("/contact", dependencies=[Depends(rate_limit("contact", 5, 600))])
 async def contact(data: ContactInput, background_tasks: BackgroundTasks):
     doc = data.model_dump()
     doc["created_at"] = datetime.now(timezone.utc).isoformat()
@@ -51,7 +55,6 @@ async def public_settings():
     return {
         "price_small": s["price_small"],
         "price_medium": s["price_medium"],
-        "price_consulting": s["price_consulting"],
         "contact_email": s["contact_email"],
         "price_chat_usd": s["price_chat_usd"],
         "chat_messages": s["chat_messages"],
