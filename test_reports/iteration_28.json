@@ -1,0 +1,51 @@
+{
+  "summary": "Frontend-only verification of OnBuySolutions benefits communication update. All 6 asks pass: (1) /asesoria-legal shows 12 legal-feature cards with required titles and correct column counts (4 at 1920/1366, 2 at 768, 1 at 390/360); (2) new legal-benefits section (id=beneficios) present before legal-pricing, title includes dynamic price 'US$ 15.99', 3 groups legal-benefit-group-0..2 with 5/5/7 items respectively; hash anchor works and no horizontal overflow at 320/360/390/768/1024/1366/1920 (scrollWidth == clientWidth everywhere); (3) Chat: chat-suggestion-1 text is '¿Qué incluye la asesoría legal de pago?'; asking the price question responds with price US$ 15.99, mentions the three groups (agente legal/expediente/herramientas sin gastar mensajes) and includes link [/asesoria-legal#beneficios] which navigates in-SPA to the benefits section; panel fits 390x844 without horizontal overflow; (4) Client (cliente.prueba@ejemplo.com) on no-case-selected shows data-testid=panel-benefits with 5 benefit items plus header; admin does NOT show panel-benefits; (5) Payment dialog on 'TEST segundo' case-pay-btn opens payment-dialog on 390x844 with internal scroll (scrollHeight 770 > clientHeight 758, no page overflow); payment-messages/quote mentions calculadoras, plazos con recordatorios, verificación de citas, checklist, cuaderno de hechos, pagos y deudas, expediente foliado y descarga en ZIP; (6) Regression: legal-cases, legal-steps, legal-comparison (8 rows via comparison-row-0..7), legal-pricing and contact form still present. Cleaned 2 test assistant_messages from DB after testing.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "/asesoria-legal": {
+      "legal-feature count": 12,
+      "required titles": "all 8 present (Calculadoras exactas, Citas legales verificadas, Plazos con recordatorios, Checklist de requisitos, Cuaderno de hechos, Pagos y deudas, Expediente listo para presentar, Tu caso siempre contigo)",
+      "columns 1920/1366/768/390/360": "4/4/2/1/1 (OK)",
+      "legal-benefits id=beneficios": "visible, title includes 'US$ 15.99'",
+      "legal-benefit-groups 0/1/2": "5 / 5 / 7 items (OK)",
+      "overflow 320/360/390/768/1024/1366/1920": "scrollWidth==clientWidth at all viewports",
+      "#beneficios anchor": "scrolls target to top ~64px after navigation",
+      "regression sections": "legal-cases, legal-steps, legal-comparison (8 rows), legal-pricing, contact form all visible"
+    },
+    "chat (390x844)": {
+      "chat-suggestion-1 text": "¿Qué incluye la asesoría legal de pago?",
+      "price Q response": "Mentions US$ 15.99, three groups, and link /asesoria-legal#beneficios",
+      "link navigation": "SPA nav to /asesoria-legal#beneficios, legal-benefits section visible",
+      "panel overflow": "no horizontal overflow (sw=cw=390)"
+    },
+    "client panel": {
+      "no-case-selected": "visible",
+      "panel-benefits items": "5 benefit items + 1 header label (OK)"
+    },
+    "admin panel": {
+      "no-case-selected": "visible",
+      "panel-benefits": "NOT present (OK)"
+    },
+    "payment-dialog (390x844, TEST segundo)": {
+      "payment-messages": "'Chat con 60 mensajes'",
+      "mentions": "calculadoras, plazos, verificación, checklist, cuaderno, pagos y deudas, foliado, ZIP - ALL present",
+      "dialog internal scroll": "scrollHeight=770 > clientHeight=758 (scrollable, within 90vh)",
+      "page overflow": "none"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "admin@onbuysolutions.com/OnBuy2026! and cliente.prueba@ejemplo.com/Cliente2026! (per /app/memory/test_credentials.md)",
+  "seed_data_creation": "none. Sent 2 real chat messages to the assistant; removed the resulting 2 assistant_messages docs (session mwk7to64-...) from DB after testing.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All benefits communication changes verified. 12 features + 3 benefit groups (5/5/7) on /asesoria-legal; chat-suggestion-1 reworded and the AI answers mention three groups + price + /asesoria-legal#beneficios link; client no-case-selected shows panel-benefits (5 items), admin hides it; payment-dialog quote lists all tools and fits 390x844 with internal scroll."
+}
