@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 24 — case records (ledger, facts, evidence, checklist, bundle, zip, permisos). Backend: 28/28 pytest PASS (test_iteration24_case_records.py). Verified recurring-month expansion (1500 x 4 = 6000, saldo 5500 after pago, chronological balance), file validations, currency, 402 pending_payment for client on all 5 write endpoints, cross-user 404s, quota unchanged by tools, cascade delete of ledger/facts. Bundle: PDF foliated 'de N' on every page, Anexo 1-A/1-B/1-C labels with correct index, document message block correctly surfaced as 'Escrito'. ZIP includes conversacion.md, LEEME.txt, archivos/*, pagos_y_deudas.csv, hechos.csv, checklist.txt. Frontend verified on the preview-emergentagent domain (admin login OK): /asesoria-legal has 8 comparison rows including 'Listo para presentar'; case-tools-btn opens menu with all 7 options (calculators, timeline, checklist, facts, ledger, bundle, zip); each dialog (ledger, facts, checklist, bundle) opens with all required data-testids; page remains clickable after Escape-close (no pointer-events lock); bundle dialog shows Anexo 1-A/1-B/1-C labels, facts+ledger checkboxes, generate button; mobile 390x844 menu renders all 7 options visible.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "EvidencePicker inside Ledger/Facts dialogs", "issues": ["React/HTML warning in console: '<span> cannot be a child of <option>' (EvidencePicker.jsx ~line 37). The ve-dynamic tooling wraps the filename text in a <span data-ve-dynamic=\"true\" style={{display:'contents'}}> inside <option>, which is invalid HTML and triggers a hydration warning. Not a functional bug (select still works) but worth cleaning."]},
+      {"screen": "Admin panel on mobile 390x844", "issues": ["document.documentElement.scrollWidth > innerWidth (horizontal overflow present on the admin Consultoría panel at 390px). The Herramientas dropdown itself opens over the view, all 7 options visible, but the underlying panel layout scrolls horizontally. Dialogs (ledger, facts, checklist, bundle) themselves were not individually re-measured at 390 — spot check only via desktop screenshots."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration24_case_records.py",
+    "/app/test_reports/pytest/iter24.xml"
+  ],
+  "action_items": [
+    "EvidencePicker.jsx: the filename rendered inside <option> is wrapped by the VE-dynamic tooling in a <span>, producing invalid HTML and a React console warning. Consider rendering the filename as plain text {f.filename} without a wrapping element so the ve-dynamic span is not injected inside <option>.",
+    "Admin panel horizontal overflow at 390px — not part of this iteration's scope but worth checking after dialog usability pass."
+  ],
+  "critical_code_review_comments": [
+    "case_records.py: ledger POST sort is by (date asc, created_at asc) so a pago on 2025-02-10 lands before a cargo on 2025-02-28; balance is accumulated chronologically and the exported table reflects this. Confirmed by tests (feb_pago balance = 1000, final saldo 5500).",
+    "case_records.py _store_file(): accepts a stored_name only if it already appears in _evidence(case_id); good defense against cross-case file reuse.",
+    "case_bundle._annex_pdf(): wraps PdfReader() in try/except so a corrupt PDF falls back to the cover sheet with a soporte digital note — verified with raw bytes 'not a real pdf'.",
+    "case_bundle._foliate(): two-pass; computes page sizes first, then stamps 'Folio N de T' bottom-right with a white background. Works on heterogeneous page sizes (image annex, pdf annex).",
+    "case_bundle._front(): uses placeholder '000 - 000' to count front pages first, then rebuilds with real folio ranges — correct way to avoid chicken-and-egg counting. Note: if the front page count changes between the dummy and real render (e.g. a long title that wraps differently when the folio ranges are wider than '000 - 000'), the front page count could drift by 1 and foliate would still work but the index numbers would be off. Edge case, unlikely with short ranges.",
+    "consulting.delete_case (line 467-471): correctly cascades to case_ledger, case_facts, case_events, case_messages. Verified by test_delete_case_cleans_records.",
+    "case_records._store_file() / add_ledger_entry: the first dated entry in a recurring cargo attaches the uploaded file; subsequent repeats have file=None. Reasonable default but not documented to the UI.",
+    "EvidencePicker option contains ve-dynamic <span> (invalid HTML inside <option>) — console hydration warning."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration24_case_records.py"],
+  "success_rate": {"backend": "100% (28/28)", "frontend": "100% on all tested selectors (admin, desktop + mobile menu)"},
+  "test_credentials": "Admin: admin@onbuysolutions.com / OnBuy2026!; Cliente: cliente.prueba@ejemplo.com / Cliente2026!",
+  "seed_data_creation": "Created and deleted during tests: several TEST_iter24 cases (admin & client), case_ledger/case_facts/case_messages entries. Final cleanup sweep removed a stray 'TEST_iter24 delete' case (left after test_delete_case_cleans_records already deleted it — safety check only).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pre-existing admin case 'TEST iter24 alquiler Señor Pérez' (id 6afbc8957705875688938e28) still has 6 ledger entries, 2 facts, 3 files (foto.jpg / contrato.pdf / audio.mp3), desalojo checklist and 2 record messages — used only for UI probing. The frontend must be driven against the REACT_APP_BACKEND_URL domain (onbuy-preview--2rpiwlk3.preview.emergentagent.com) — the vanity domain onbuysolutions.com is a separate deploy and cookies don't cross. No AI calls were spent."
+}

@@ -83,7 +83,7 @@ const Message = ({ m, caseId, onExport, exporting, onRetry, onReport }) => {
   return (
     <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`} data-testid={`case-message-${m.id || "streaming"}`}>
       <div
-        className={`max-w-[85%] px-5 py-4 text-sm leading-relaxed ${
+        className={`max-w-[85%] min-w-0 px-5 py-4 text-sm leading-relaxed ${
           isUser
             ? "bg-[#0F172A] text-white rounded-2xl rounded-br-sm"
             : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-sm"
@@ -92,7 +92,7 @@ const Message = ({ m, caseId, onExport, exporting, onRetry, onReport }) => {
         {isUser ? (
           <p className="whitespace-pre-wrap">{m.content}</p>
         ) : (
-          <div className="markdown-report text-sm">
+          <div className="markdown-report text-sm overflow-x-auto">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanContent(m.content)}</ReactMarkdown>
           </div>
         )}
@@ -483,7 +483,7 @@ export const AdminConsulting = ({ openCaseId }) => {
   };
 
   return (
-    <div className="grid lg:grid-cols-[320px_1fr] gap-6" data-testid="consulting-panel">
+    <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6" data-testid="consulting-panel">
       {/* Lista de casos */}
       <div className="bg-white border border-slate-200 flex flex-col h-[72vh]">
         <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -568,7 +568,7 @@ export const AdminConsulting = ({ openCaseId }) => {
           </p>
         </div>
       ) : (
-        <div className="bg-[#F8FAFC] border border-slate-200 h-[72vh] flex flex-col">
+        <div className="bg-[#F8FAFC] border border-slate-200 h-[72vh] flex flex-col min-w-0">
           {/* Header del caso */}
           <div className="bg-white border-b border-slate-200 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">

@@ -138,3 +138,14 @@ Sistema de auditorías a condominios en Perú usando la IA de Google más avanza
   - Web: components/LegalComparison.jsx en /asesoria-legal#comparativa (7 filas) y bloque equivalente en el prompt del asistente web. CONSULTING_SYSTEM_PROMPT menciona Calculadoras y Plazos.
   - UI: CaseCalculators.jsx, CaseTimeline.jsx; botones calculators-btn y timeline-btn en la cabecera del caso.
   - PENDIENTE del usuario: la causa real de las fallas intermitentes en el VPS no se diagnosticó (posible timeout del proxy nginx o saturación del modelo); los reportes de falla traerán el error exacto.
+
+- [x] Herramientas de solo código para clientes de asesoría (2026-11, testing iteration_24: backend 28/28, frontend OK; flujos de UI de pagos, expediente, ZIP y móvil verificados además con capturas propias):
+  - Menú "Herramientas" en la cabecera del caso (components/CaseTools.jsx, case-tools-btn) agrupa: Calculadoras, Plazos, Checklist, Cuaderno de hechos, Pagos y deudas, Expediente para presentar, Descargar caso (ZIP). Ninguna usa IA ni descuenta mensajes; escritura requiere caso autorizada/prueba o admin (402 si no).
+  - backend/routes/case_records.py: /api/cases/{id}/evidence (todos los archivos del caso), /ledger (cargos/pagos, repetición mensual, comprobante subido o existente, moneda PEN/USD en cases.ledger_currency, /ledger/export → mensaje kind="record"), /facts (+ /facts/export → "Relación de hechos" PRIMERO.-, SEGUNDO.-…), /checklist (plantillas CHECKLISTS: desalojo, alimentos, indecopi, deuda, laboral, otro; guardado en cases.checklist), /bundle (PDF), /download-zip.
+  - backend/case_bundle.py: carátula+índice con folios, secciones (escrito, hechos, estado de cuenta), anexos "Anexo 1-A…" con carátula; PDF e imágenes se incorporan, audio/video/Excel solo carátula ("soporte digital"), PDF protegido/dañado no rompe; foliado "Folio N de T" en cada página.
+  - Colecciones nuevas: case_ledger {case_id,type,date,amount,concept,file}, case_facts {case_id,date,text,file}. Se borran con el caso.
+  - Calculadoras de alimentos/alquileres: botón "Usar los pagos de mi registro".
+  - Mensajes con kind (calculation|record) no muestran "Verificar citas".
+  - Fix móvil: el panel de Consultoría desbordaba a 390px (grid sin minmax); corregido.
+  - Comparativa pública: 8 filas (nueva "Listo para presentar"); prompts del asistente web y del consultor mencionan las herramientas.
+  - Ideas no construidas (ofrecidas al usuario): calculadora de plazos en días hábiles con feriados editables, plantillas rellenables PDF/Word, más calculadoras (tasas judiciales, cuotas, horas extras, SUNAT), exportar plazos .ics, enlace de solo lectura para compartir el expediente.

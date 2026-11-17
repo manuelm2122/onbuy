@@ -45,7 +45,7 @@ export const CaseTools = ({ caseId, onChanged }) => {
             {zipping ? <Loader2 className="animate-spin" size={13} /> : <Wrench size={13} />} Herramientas <ChevronDown size={12} />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72" data-testid="case-tools-menu">
+        <DropdownMenuContent align="end" className="w-72 max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto" data-testid="case-tools-menu">
           {TOOLS.map((t) => (
             <DropdownMenuItem key={t.key} onSelect={() => setTimeout(() => setActive(t.key), 0)} data-testid={t.testId} className="gap-3 py-2 cursor-pointer">
               <t.icon size={16} className="text-[#0284C7] shrink-0" />

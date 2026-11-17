@@ -34,7 +34,7 @@ export const EvidencePicker = ({ caseId, value, onChange, label = "Prueba o comp
         ) : (
           <select value={value?.storedName || ""} onChange={(e) => onChange(e.target.value ? { storedName: e.target.value } : null)} data-testid="evidence-select" className={`${inputCls} flex-1 min-w-[180px]`}>
             <option value="">Sin archivo</option>
-            {files.map((f) => <option key={f.stored_name} value={f.stored_name}>{f.filename} ({f.origin})</option>)}
+            {files.map((f) => <option key={f.stored_name} value={f.stored_name}>{`${f.filename} (${f.origin})`}</option>)}
           </select>
         )}
         <input ref={inputRef} type="file" accept={ACCEPT} className="hidden" data-testid="evidence-file-input" onChange={(e) => { if (e.target.files[0]) onChange({ file: e.target.files[0] }); e.target.value = ""; }} />
