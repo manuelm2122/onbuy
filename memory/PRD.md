@@ -149,3 +149,9 @@ Sistema de auditorías a condominios en Perú usando la IA de Google más avanza
   - Fix móvil: el panel de Consultoría desbordaba a 390px (grid sin minmax); corregido.
   - Comparativa pública: 8 filas (nueva "Listo para presentar"); prompts del asistente web y del consultor mencionan las herramientas.
   - Ideas no construidas (ofrecidas al usuario): calculadora de plazos en días hábiles con feriados editables, plantillas rellenables PDF/Word, más calculadoras (tasas judiciales, cuotas, horas extras, SUNAT), exportar plazos .ics, enlace de solo lectura para compartir el expediente.
+
+- [x] App instalable (PWA) + auditoría responsive (2026-11, testing iteration_25/26/27):
+  - PWA: public/manifest.json (start_url /panel, standalone), icon-192/512 e icon-maskable-512, public/sw.js (solo navegaciones: red primero y offline.html si no hay conexión; NO cachea /api ni recursos, así las actualizaciones del VPS se ven al instante), registro en src/index.js, components/InstallAppButton.jsx (beforeinstallprompt en Android/Chrome/Edge; instrucciones en iOS) en footer, menú móvil y cabecera del panel. Requiere HTTPS en el VPS.
+  - Navegación: menú hamburguesa en móvil (SiteNav.jsx: nav-menu-btn, nav-mobile-menu); antes los enlaces no eran accesibles en móvil.
+  - Auditoría en 11 viewports (320 a 1920) sobre 9 páginas públicas, panel cliente y 14 pestañas admin: 2 desbordes corregidos (/libro-de-reclamaciones ≤414px; cabecera de /terminos, /privacidad, /uso-ia ≤360px). Resto sin hallazgos.
+  - LECCIÓN: no lanzar testing_agent en paralelo con ediciones de código (la iteración 26 probó una versión anterior).
