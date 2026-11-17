@@ -17,8 +17,6 @@ import {
   X,
   CreditCard,
   Lock,
-  Calculator,
-  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -40,8 +38,7 @@ import { useAuth } from "@/context/AuthContext";
 import { PaymentDialog } from "@/components/PaymentDialog";
 import { postCaseChat, newClientMsgId, sleep } from "@/lib/caseChat";
 import { DeliveryStatus, CitationCheck } from "@/components/CaseMessageExtras";
-import { CaseCalculators } from "@/components/CaseCalculators";
-import { CaseTimeline } from "@/components/CaseTimeline";
+import { CaseTools } from "@/components/CaseTools";
 
 const STATUS_META = {
   activo: { label: "Activo", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -124,7 +121,7 @@ const Message = ({ m, caseId, onExport, exporting, onRetry, onReport }) => {
               <Download size={11} />
               {m.has_document ? "Respuesta completa" : "Exportar PDF"}
             </button>
-            {m.kind !== "calculation" && <CitationCheck caseId={caseId} message={m} />}
+            {!m.kind && <CitationCheck caseId={caseId} message={m} />}
           </div>
         )}
       </div>
@@ -161,8 +158,6 @@ export const AdminConsulting = ({ openCaseId }) => {
   const [imgPrompt, setImgPrompt] = useState("");
   const [generatingImg, setGeneratingImg] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [calcOpen, setCalcOpen] = useState(false);
-  const [timelineOpen, setTimelineOpen] = useState(false);
   const outboxRef = useRef({});
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
@@ -618,20 +613,7 @@ export const AdminConsulting = ({ openCaseId }) => {
                 {generatingReport ? <Loader2 className="animate-spin" size={13} /> : <FileBadge size={13} />}
                 {generatingReport ? "Generando…" : "Informe final"}
               </button>
-              <button
-                onClick={() => setCalcOpen(true)}
-                data-testid="calculators-btn"
-                className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] text-slate-500 font-semibold px-3 py-1.5 rounded-full text-xs transition-colors"
-              >
-                <Calculator size={13} /> Calculadoras
-              </button>
-              <button
-                onClick={() => setTimelineOpen(true)}
-                data-testid="timeline-btn"
-                className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] text-slate-500 font-semibold px-3 py-1.5 rounded-full text-xs transition-colors"
-              >
-                <CalendarClock size={13} /> Plazos
-              </button>
+              <CaseTools caseId={selected.id} onChanged={() => { openCase(selected.id); loadCases(); }} />
               <button
                 onClick={openLibrary}
                 data-testid="library-btn"
@@ -933,13 +915,6 @@ export const AdminConsulting = ({ openCaseId }) => {
           </form>
         </DialogContent>
       </Dialog>
-
-      {selected && (
-        <>
-          <CaseCalculators caseId={selected.id} open={calcOpen} onOpenChange={setCalcOpen} onDone={() => { openCase(selected.id); loadCases(); }} />
-          <CaseTimeline caseId={selected.id} open={timelineOpen} onOpenChange={setTimelineOpen} />
-        </>
-      )}
 
       {selected && !isAdmin && (
         <PaymentDialog

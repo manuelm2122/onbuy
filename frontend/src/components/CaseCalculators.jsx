@@ -85,6 +85,22 @@ export const CaseCalculators = ({ caseId, open, onOpenChange, onDone }) => {
   const [inputs, setInputs] = useState({});
   const [busy, setBusy] = useState(false);
 
+  const usePayments = async () => {
+    try {
+      const { data } = await api.get(`/cases/${caseId}/ledger`);
+      const byMonth = {};
+      data.entries.filter((e) => e.type === "pago").forEach((e) => {
+        byMonth[e.date.slice(0, 7)] = (byMonth[e.date.slice(0, 7)] || 0) + e.amount;
+      });
+      const lines = Object.entries(byMonth).map(([m, v]) => `${m} ${v.toFixed(2)}`);
+      if (!lines.length) return toast.info("No hay pagos en el registro de pagos y deudas");
+      setInputs((p) => ({ ...p, pagos: lines.join("\n") }));
+      toast.success(`${lines.length} mes(es) con pagos cargados desde tu registro`);
+    } catch (err) {
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -119,6 +135,11 @@ export const CaseCalculators = ({ caseId, open, onOpenChange, onDone }) => {
               <Field key={`${type}-${f.k}`} f={f} value={inputs[f.k]} onChange={(v) => setInputs((p) => ({ ...p, [f.k]: v }))} />
             ))}
           </div>
+          {CALCS[type].fields.some((f) => f.k === "pagos") && (
+            <button type="button" onClick={usePayments} data-testid="calc-use-payments-btn" className="text-xs font-semibold text-[#0284C7] hover:underline">
+              Usar los pagos de mi registro de pagos y deudas
+            </button>
+          )}
           <button type="submit" disabled={busy} data-testid="calc-submit-btn" className="w-full inline-flex items-center justify-center gap-2 bg-[#0284C7] hover:bg-[#0EA5E9] disabled:opacity-60 text-white font-semibold py-3 rounded-full text-sm transition-colors">
             {busy ? <Loader2 className="animate-spin" size={15} /> : <Calculator size={15} />} Calcular y añadir al expediente
           </button>

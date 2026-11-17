@@ -97,7 +97,7 @@ REGLAS:
 (contenido completo del documento en Markdown)
 <<<FIN_DOCUMENTO>>>
 Dentro de los marcadores escribe SOLO el texto final del documento, sin comentarios ni explicaciones; esos van fuera de los marcadores. Esto permite exportar a PDF únicamente el documento limpio.
-- El expediente tiene herramientas propias que el cliente abre con los botones "Calculadoras" y "Plazos": calculadoras exactas por fórmula (beneficios sociales, intereses legales, pensiones de alimentos devengadas, alquileres impagos) y una línea de tiempo con recordatorios por correo. Cuando haga falta una liquidación de ese tipo, indica qué datos reunir y recomienda usar la calculadora en lugar de hacer tú la aritmética; sus resultados aparecen en esta conversación y debes usarlos tal cual. Cuando menciones una fecha límite, sugiere registrarla en "Plazos".
+- El expediente tiene herramientas propias que el cliente abre con los botones "Calculadoras" y "Plazos": calculadoras exactas por fórmula (beneficios sociales, intereses legales, pensiones de alimentos devengadas, alquileres impagos) y una línea de tiempo con recordatorios por correo. En el menú "Herramientas" también tiene: checklist de requisitos por trámite, cuaderno de hechos (cronología que se exporta como relación de hechos), registro de pagos y deudas (estado de cuenta), "Expediente para presentar" (un solo PDF foliado con el escrito, el índice y los anexos numerados) y la descarga completa del caso en ZIP. Recomiéndalas cuando ayuden y usa tal cual los registros que el cliente añada a esta conversación. Cuando haga falta una liquidación de ese tipo, indica qué datos reunir y recomienda usar la calculadora en lugar de hacer tú la aritmética; sus resultados aparecen en esta conversación y debes usarlos tal cual. Cuando menciones una fecha límite, sugiere registrarla en "Plazos".
 - Analiza a fondo cualquier archivo adjunto: extrae montos, fechas, nombres, cláusulas e irregularidades relevantes para el caso.
 - Responde en Markdown (títulos ##, listas, tablas, negritas).
 - En temas de alto riesgo legal, recuerda que tu consultoría no reemplaza el patrocinio de un abogado colegiado ni la firma de un contador público, e indícalo brevemente cuando corresponda."""
@@ -467,6 +467,8 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
     async def delete_case(case_id: str, user: dict = Depends(get_current_user)):
         await _get_case(case_id, user)
         await db.case_events.delete_many({"case_id": case_id})
+        await db.case_ledger.delete_many({"case_id": case_id})
+        await db.case_facts.delete_many({"case_id": case_id})
         shutil.rmtree(cases_dir / case_id, ignore_errors=True)
         deleted = await db.case_messages.delete_many({"case_id": case_id})
         await db.cases.delete_one({"_id": ObjectId(case_id)})
@@ -771,8 +773,11 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         else:
             case_doc = await db.cases.find_one({"_id": ObjectId(case_id)})
             fr = (case_doc or {}).get("final_report") or {}
+            record = await db.case_ledger.find_one({"case_id": case_id, "file.stored_name": stored_name}) or await db.case_facts.find_one({"case_id": case_id, "file.stored_name": stored_name})
             if fr.get("stored_name") == stored_name:
                 filename = fr.get("filename", stored_name)
+            elif record:
+                filename = record["file"]["filename"]
         return FileResponse(path, filename=filename)
 
     @router.get("/{case_id}/documents")

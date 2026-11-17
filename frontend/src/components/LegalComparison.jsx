@@ -7,6 +7,7 @@ const ROWS = [
   ["Cálculos", "Calculadoras exactas por fórmula: beneficios sociales, intereses legales, alimentos devengados y alquileres, mes a mes", "Aritmética hecha por la IA, que puede equivocarse"],
   ["Plazos", "Línea de tiempo del caso con recordatorios por correo antes de cada vencimiento", "No te avisa de nada"],
   ["Citas legales", "Botón \"Verificar citas\": busca cada norma citada en fuentes públicas, te muestra el enlace y marca las dudosas", "Puede citar artículos que no existen sin advertirlo"],
+  ["Listo para presentar", "Un solo PDF foliado con el escrito, el índice y los anexos numerados; además checklist de requisitos, cuaderno de hechos, registro de pagos y descarga completa del caso", "Tú ordenas, numeras e imprimes todo por tu cuenta"],
   ["Respaldo", "Empresa peruana con RUC, Libro de Reclamaciones y protección de datos bajo la ley peruana", "Sin atención local ni responsable en el Perú"],
 ];
 

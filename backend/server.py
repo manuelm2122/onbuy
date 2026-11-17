@@ -23,6 +23,7 @@ from routes.mail import router as mail_router
 from routes.audit_clients import router as audit_clients_router
 from routes.assistant import router as assistant_router
 from routes.case_tools import router as case_tools_router, reminder_loop
+from routes.case_records import router as case_records_router
 
 app = FastAPI(title="OnBuySolutions API")
 
@@ -39,6 +40,7 @@ api_router.include_router(mail_router)
 api_router.include_router(audit_clients_router)
 api_router.include_router(assistant_router)
 api_router.include_router(case_tools_router)
+api_router.include_router(case_records_router)
 api_router.include_router(create_consulting_router(db, get_current_user, get_app_settings, UPLOAD_DIR))
 app.include_router(api_router)
 
@@ -70,6 +72,8 @@ async def startup():
     await db.assistant_messages.create_index([("session_id", 1), ("created_at", -1)])
     await db.assistant_messages.create_index([("day", 1), ("role", 1)])
     await db.case_events.create_index([("case_id", 1), ("date", 1)])
+    await db.case_ledger.create_index([("case_id", 1), ("date", 1)])
+    await db.case_facts.create_index([("case_id", 1), ("date", 1)])
     asyncio.create_task(reminder_loop())
     await db.settings.update_one({"_id": "app"}, {"$unset": {"price_consulting": ""}})
     if not SAMPLES_DIR.exists() or not any(SAMPLES_DIR.iterdir()):

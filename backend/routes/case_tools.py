@@ -49,7 +49,7 @@ class FailureReport(BaseModel):
 
 
 async def _get_case(case_id: str, user: dict) -> dict:
-    case_doc = await db.cases.find_one({"_id": ObjectId(case_id)})
+    case_doc = await db.cases.find_one({"_id": ObjectId(case_id)}) if ObjectId.is_valid(case_id) else None
     if not case_doc or (user.get("role") != "admin" and case_doc.get("user_id") != user["_id"]):
         raise HTTPException(status_code=404, detail="Caso no encontrado")
     return case_doc
