@@ -130,7 +130,10 @@ class SettingsInput(BaseModel):
     paypal_client_id: Optional[str] = None
     paypal_secret: Optional[str] = None
     paypal_mode: Optional[str] = None
-    price_consulting: Optional[float] = None
+    assistant_enabled: Optional[bool] = None
+    assistant_model: Optional[str] = Field(default=None, max_length=80)
+    assistant_daily_limit: Optional[int] = Field(default=None, gt=0)
+    assistant_extra_info: Optional[str] = Field(default=None, max_length=4000)
     consulting_budget_usd: Optional[float] = None
     google_api_key: Optional[str] = None
     llm_provider: Optional[str] = None
@@ -158,7 +161,7 @@ class ManualPaymentInput(BaseModel):
 
 
 class CreateOrderInput(BaseModel):
-    item_type: str = "audit"
+    item_type: str = "case"
     item_id: str
     plan: Optional[str] = None
 

@@ -69,7 +69,9 @@ SETTINGS_DEFAULTS = {
     "resend_sender": "onboarding@resend.dev",
     "complaints_notify_email": "onbuysolutions@gmail.com",
     "paypal_mode": "sandbox",
-    "price_consulting": 30.0,
+    "assistant_enabled": True,
+    "assistant_model": "gemini-2.5-flash",
+    "assistant_daily_limit": 1500,
     "consulting_budget_usd": 6.0,
     "price_chat_usd": 15.99,
     "chat_messages": 60,
@@ -103,6 +105,7 @@ async def get_app_settings() -> dict:
     merged.setdefault("vertex_service_account_json", "")
     merged.setdefault("mail_addresses", "")
     merged.setdefault("forward_email", "")
+    merged.setdefault("assistant_extra_info", "")
     merged["resend_webhook_secret"] = doc.get("resend_webhook_secret") or os.environ.get("RESEND_WEBHOOK_SECRET", "")
     merged.setdefault("vertex_project", "")
     if merged.get("llm_provider") == "google" and merged["google_api_key"]:

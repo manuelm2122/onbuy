@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { KeyRound, Settings2, Building2, Save, MessageCircle, Mail } from "lucide-react";
+import { KeyRound, Settings2, Building2, Save, MessageCircle, Mail, Bot } from "lucide-react";
 import { toast } from "sonner";
 import { api, formatApiErrorDetail } from "@/lib/api";
 import { BackupPanel } from "@/components/BackupPanel";
@@ -67,6 +67,10 @@ export const AdminSettings = () => {
       payload.whatsapp_enabled = !!s.whatsapp_enabled;
       payload.whatsapp_number = s.whatsapp_number || "";
       payload.whatsapp_message = s.whatsapp_message || "";
+      payload.assistant_enabled = !!s.assistant_enabled;
+      payload.assistant_model = (s.assistant_model || "").trim();
+      payload.assistant_daily_limit = parseInt(s.assistant_daily_limit, 10) || 1500;
+      payload.assistant_extra_info = s.assistant_extra_info || "";
       if (llmKey.trim()) payload.llm_key = llmKey.trim();
       if (googleKey.trim()) payload.google_api_key = googleKey.trim();
       if (vertexJson.trim()) payload.vertex_service_account_json = vertexJson.trim();
@@ -264,8 +268,8 @@ export const AdminSettings = () => {
             )}
             <Input label="Modelo de IA" field="ai_model" value={s.ai_model} onChange={set} hint="Ej.: gemini-3.1-pro-preview" />
             <Input label="Email de contacto" field="contact_email" value={s.contact_email} onChange={set} />
-            <Input label="Precio plan pequeño (S/, <50 dptos.)" field="price_small" value={s.price_small} onChange={set} />
-            <Input label="Precio plan mediano-grande (S/, 50-150)" field="price_medium" value={s.price_medium} onChange={set} />
+            <Input label="Auditoría: monto referencial plan pequeño (S/)" field="price_small" value={s.price_small} onChange={set} hint="Solo pre-llena el generador de documentos. No se muestra en la web." />
+            <Input label="Auditoría: monto referencial plan mediano-grande (S/)" field="price_medium" value={s.price_medium} onChange={set} hint="Solo pre-llena el generador de documentos. No se muestra en la web." />
             <Input label="Precio por chat (US$)" field="price_chat_usd" value={s.price_chat_usd} onChange={set} hint="Asesoría legal y contable: precio de cada chat habilitado" />
             <Input label="Mensajes incluidos por chat" field="chat_messages" value={s.chat_messages} onChange={set} />
             <Input label="Precio paquete adicional (US$)" field="price_extra_usd" value={s.price_extra_usd} onChange={set} />
@@ -298,6 +302,45 @@ export const AdminSettings = () => {
             </label>
             <Input label="Número de WhatsApp" field="whatsapp_number" value={s.whatsapp_number} onChange={set} placeholder="51999888777" hint="Con código de país, solo dígitos. Ej.: 51 + número" />
             <Input label="Mensaje inicial" field="whatsapp_message" value={s.whatsapp_message} onChange={set} hint="Usa {servicio} donde debe ir el servicio elegido" />
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 p-6" data-testid="settings-assistant-card">
+          <div className="flex items-center gap-3">
+            <Bot className="text-[#0284C7]" size={22} strokeWidth={1.5} />
+            <h3 className="font-heading font-bold text-[#0F172A]">Chat de atención al cliente (IA)</h3>
+          </div>
+          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+            Chat flotante de las páginas públicas. Responde solo sobre OnBuySolutions, Gusto Peruano, Hoteles QR y
+            Tienda Fácil QR. Usa el proveedor de IA activo de arriba, pero con su propio modelo económico.
+          </p>
+          <div className="mt-5 grid sm:grid-cols-2 gap-4">
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={!!s.assistant_enabled}
+                onChange={(e) => set("assistant_enabled", e.target.checked)}
+                data-testid="settings-assistant_enabled-checkbox"
+              />
+              Mostrar el chat en la web
+            </label>
+            <Input label="Modelo del chat" field="assistant_model" value={s.assistant_model} onChange={set} placeholder="gemini-2.5-flash" hint="Modelo económico y rápido. Vacío = gemini-2.5-flash. Con API Key propia de Google también puedes usar gemini-2.5-flash-lite (aún más barato); la Universal Key de Emergent no lo admite." />
+            <Input label="Máximo de mensajes por día" field="assistant_daily_limit" value={s.assistant_daily_limit} onChange={set} hint="Tope total de consultas diarias entre todos los visitantes, para controlar el gasto" />
+            <div className="sm:col-span-2">
+              <label className="text-[10px] tracking-[0.15em] uppercase text-slate-500 font-semibold">Información adicional para el asistente</label>
+              <textarea
+                rows={5}
+                maxLength={4000}
+                value={s.assistant_extra_info ?? ""}
+                onChange={(e) => set("assistant_extra_info", e.target.value)}
+                placeholder="Ej.: precios de planes de Gusto Peruano y Hoteles QR, horarios de atención, promociones vigentes…"
+                data-testid="settings-assistant_extra_info-input"
+                className="mt-1 w-full border border-slate-300 focus:border-[#0284C7] outline-none px-3 py-2.5 text-sm transition-colors resize-y bg-white"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                El asistente ya conoce los servicios y los precios de la asesoría legal. Agrega aquí datos que cambien seguido.
+              </p>
+            </div>
           </div>
         </div>
 

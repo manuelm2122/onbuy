@@ -20,6 +20,7 @@ from routes.payments import router as payments_router
 from routes.blog import router as blog_router, seed_blog
 from routes.mail import router as mail_router
 from routes.audit_clients import router as audit_clients_router
+from routes.assistant import router as assistant_router
 
 app = FastAPI(title="OnBuySolutions API")
 
@@ -34,6 +35,7 @@ api_router.include_router(payments_router)
 api_router.include_router(blog_router)
 api_router.include_router(mail_router)
 api_router.include_router(audit_clients_router)
+api_router.include_router(assistant_router)
 api_router.include_router(create_consulting_router(db, get_current_user, get_app_settings, UPLOAD_DIR))
 app.include_router(api_router)
 
@@ -62,6 +64,9 @@ async def startup():
     await seed_blog()
     await db.mail_messages.create_index("resend_id", unique=True, sparse=True)
     await db.mail_messages.create_index([("direction", 1), ("created_at", -1)])
+    await db.assistant_messages.create_index([("session_id", 1), ("created_at", -1)])
+    await db.assistant_messages.create_index([("day", 1), ("role", 1)])
+    await db.settings.update_one({"_id": "app"}, {"$unset": {"price_consulting": ""}})
     if not SAMPLES_DIR.exists() or not any(SAMPLES_DIR.iterdir()):
         from generate_samples import generate_all
         generate_all(SAMPLES_DIR)

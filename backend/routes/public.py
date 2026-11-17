@@ -53,9 +53,8 @@ async def contact(data: ContactInput, background_tasks: BackgroundTasks):
 async def public_settings():
     s = await get_app_settings()
     return {
-        "price_small": s["price_small"],
-        "price_medium": s["price_medium"],
         "contact_email": s["contact_email"],
+        "assistant_enabled": bool(s["assistant_enabled"]),
         "price_chat_usd": s["price_chat_usd"],
         "chat_messages": s["chat_messages"],
         "price_extra_usd": s["price_extra_usd"],

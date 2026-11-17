@@ -184,7 +184,7 @@ class TestPublicSettings:
         assert r.status_code == 200
         d = r.json()
         assert "price_consulting" not in d
-        assert "price_small" in d and "price_medium" in d
+        assert "price_small" not in d and "price_medium" not in d
         assert "trial_messages" in d
 
 

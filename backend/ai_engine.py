@@ -18,11 +18,14 @@ class EmergentChat:
 
     def __init__(self, api_key, session_id, system_message, initial_messages, model):
         from emergentintegrations.llm.chat import LlmChat as ELlmChat
+        messages = list(initial_messages or [])
+        if messages and messages[0].get("role") != "system":
+            messages.insert(0, {"role": "system", "content": system_message})
         self.inner = ELlmChat(
             api_key=api_key,
             session_id=session_id,
             system_message=system_message,
-            initial_messages=initial_messages or None,
+            initial_messages=messages or None,
         ).with_model("gemini", model)
 
     def with_tools(self, tools):

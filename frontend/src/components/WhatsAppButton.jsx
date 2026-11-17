@@ -20,7 +20,7 @@ export const WhatsAppButton = ({ defaultService = "auditorias" }) => {
   const href = `https://wa.me/${cfg.whatsapp_number}?text=${encodeURIComponent(text)}`;
 
   return (
-    <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-3" data-testid="whatsapp-widget">
+    <div className="fixed bottom-24 right-6 z-50 flex flex-col items-end gap-3" data-testid="whatsapp-widget">
       <AnimatePresence>
         {open && (
           <motion.div

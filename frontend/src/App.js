@@ -14,6 +14,7 @@ import Panel from "@/pages/Panel";
 import AuditDetail from "@/pages/AuditDetail";
 import LegalPage from "@/pages/LegalPage";
 import ComplaintsPage from "@/pages/ComplaintsPage";
+import { ChatWidget } from "@/components/ChatWidget";
 
 const Protected = ({ children }) => {
   const { user } = useAuth();
@@ -65,6 +66,7 @@ function App() {
             }
           />
         </Routes>
+        <ChatWidget />
       </BrowserRouter>
       <ThemedToaster />
     </AuthProvider>
