@@ -97,6 +97,7 @@ REGLAS:
 (contenido completo del documento en Markdown)
 <<<FIN_DOCUMENTO>>>
 Dentro de los marcadores escribe SOLO el texto final del documento, sin comentarios ni explicaciones; esos van fuera de los marcadores. Esto permite exportar a PDF únicamente el documento limpio.
+- El expediente tiene herramientas propias que el cliente abre con los botones "Calculadoras" y "Plazos": calculadoras exactas por fórmula (beneficios sociales, intereses legales, pensiones de alimentos devengadas, alquileres impagos) y una línea de tiempo con recordatorios por correo. Cuando haga falta una liquidación de ese tipo, indica qué datos reunir y recomienda usar la calculadora en lugar de hacer tú la aritmética; sus resultados aparecen en esta conversación y debes usarlos tal cual. Cuando menciones una fecha límite, sugiere registrarla en "Plazos".
 - Analiza a fondo cualquier archivo adjunto: extrae montos, fechas, nombres, cláusulas e irregularidades relevantes para el caso.
 - Responde en Markdown (títulos ##, listas, tablas, negritas).
 - En temas de alto riesgo legal, recuerda que tu consultoría no reemplaza el patrocinio de un abogado colegiado ni la firma de un contador público, e indícalo brevemente cuando corresponda."""
@@ -353,6 +354,8 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                 for a in m.get("attachments", [])
             ],
             "created_at": m["created_at"],
+            "citations": m.get("citations"),
+            "kind": m.get("kind"),
         }
 
     async def _case_stats(case_ids: List[str]) -> dict:
@@ -463,6 +466,7 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
     @router.delete("/{case_id}")
     async def delete_case(case_id: str, user: dict = Depends(get_current_user)):
         await _get_case(case_id, user)
+        await db.case_events.delete_many({"case_id": case_id})
         shutil.rmtree(cases_dir / case_id, ignore_errors=True)
         deleted = await db.case_messages.delete_many({"case_id": case_id})
         await db.cases.delete_one({"_id": ObjectId(case_id)})
@@ -492,17 +496,31 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
         case_id: str,
         text: str = Form(...),
         files: List[UploadFile] = File(default=[]),
+        client_msg_id: Optional[str] = Form(None),
         user: dict = Depends(get_current_user),
     ):
         case_doc = await _get_case(case_id, user)
+        existing = None
+        if client_msg_id:
+            existing = await db.case_messages.find_one({"case_id": case_id, "role": "user", "client_msg_id": client_msg_id})
+        if existing:
+            reply = await db.case_messages.find_one({"case_id": case_id, "role": "assistant", "reply_to": client_msg_id})
+            if reply and not reply.get("partial"):
+                async def replay():
+                    yield reply["content"]
+                return StreamingResponse(replay(), media_type="text/plain; charset=utf-8")
+            if reply:
+                await db.case_messages.delete_one({"_id": reply["_id"]})
+                await _refund_message(case_id, user)
+                case_doc = await _get_case(case_id, user)
         _require_usable(case_doc, user)
         if not text.strip() and not files:
             raise HTTPException(status_code=400, detail="Escribe un mensaje o adjunta un archivo")
         case_dir = cases_dir / case_id
         case_dir.mkdir(exist_ok=True)
 
-        attachments = []
-        for f in files or []:
+        attachments = existing.get("attachments", []) if existing else []
+        for f in [] if existing else files or []:
             ext = Path(f.filename).suffix.lower()
             if ext not in CASE_EXT_MIME:
                 raise HTTPException(status_code=400, detail=f"Formato no soportado: {ext}. Usa PDF, imágenes, Excel/CSV, audio o video.")
@@ -520,8 +538,12 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
             })
 
         now = datetime.now(timezone.utc).isoformat()
-        user_msg = {"case_id": case_id, "role": "user", "content": text.strip(), "attachments": attachments, "created_at": now}
-        await db.case_messages.insert_one(user_msg)
+        user_msg = existing or {
+            "case_id": case_id, "role": "user", "content": text.strip(), "attachments": attachments,
+            "client_msg_id": client_msg_id, "created_at": now,
+        }
+        if not existing:
+            await db.case_messages.insert_one(user_msg)
 
         prior = await db.case_messages.find({"case_id": case_id, "_id": {"$ne": user_msg["_id"]}}).sort("created_at", 1).to_list(1000)
         history = []
@@ -570,6 +592,8 @@ def create_consulting_router(db, get_current_user, get_app_settings, upload_dir:
                         "role": "assistant",
                         "content": answer,
                         "attachments": [],
+                        "reply_to": client_msg_id,
+                        "partial": bool(stream_error),
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     })
                 nombres = ", ".join(a["filename"] for a in attachments) or "ninguno"

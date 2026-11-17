@@ -11,6 +11,7 @@ import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ContactSection } from "@/components/ContactSection";
+import { LegalComparison } from "@/components/LegalComparison";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -163,6 +164,8 @@ export default function LegalService() {
           </div>
         </div>
       </section>
+
+      <LegalComparison />
 
       <section className="bg-[#0284C7] py-20" data-testid="legal-pricing">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">

@@ -17,6 +17,8 @@ import {
   X,
   CreditCard,
   Lock,
+  Calculator,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -36,6 +38,10 @@ import {
 import { api, BACKEND_URL, formatApiErrorDetail } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { PaymentDialog } from "@/components/PaymentDialog";
+import { postCaseChat, newClientMsgId, sleep } from "@/lib/caseChat";
+import { DeliveryStatus, CitationCheck } from "@/components/CaseMessageExtras";
+import { CaseCalculators } from "@/components/CaseCalculators";
+import { CaseTimeline } from "@/components/CaseTimeline";
 
 const STATUS_META = {
   activo: { label: "Activo", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -75,10 +81,10 @@ const cleanContent = (text) =>
     .replace(/<<<DOCUMENTO:\s*(.*?)>>>/g, "\n---\n### $1\n")
     .replace(/<<<FIN_DOCUMENTO>>>/g, "\n---\n");
 
-const Message = ({ m, caseId, onExport, exporting }) => {
+const Message = ({ m, caseId, onExport, exporting, onRetry, onReport }) => {
   const isUser = m.role === "user";
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`} data-testid={`case-message-${m.id || "streaming"}`}>
+    <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`} data-testid={`case-message-${m.id || "streaming"}`}>
       <div
         className={`max-w-[85%] px-5 py-4 text-sm leading-relaxed ${
           isUser
@@ -118,9 +124,11 @@ const Message = ({ m, caseId, onExport, exporting }) => {
               <Download size={11} />
               {m.has_document ? "Respuesta completa" : "Exportar PDF"}
             </button>
+            {m.kind !== "calculation" && <CitationCheck caseId={caseId} message={m} />}
           </div>
         )}
       </div>
+      {isUser && <DeliveryStatus m={m} onRetry={onRetry} onReport={onReport} />}
     </div>
   );
 };
@@ -153,6 +161,9 @@ export const AdminConsulting = ({ openCaseId }) => {
   const [imgPrompt, setImgPrompt] = useState("");
   const [generatingImg, setGeneratingImg] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const outboxRef = useRef({});
   const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
 
@@ -321,54 +332,64 @@ export const AdminConsulting = ({ openCaseId }) => {
     loadCases();
   };
 
+  const patchMessage = (id, patch) =>
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+
+  const deliver = async (id, maxAttempts) => {
+    const job = outboxRef.current[id];
+    setSending(true);
+    let lastErr = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      patchMessage(id, { delivery: attempt === 1 ? null : { state: "retrying", attempt: attempt - 1, max: maxAttempts - 1 } });
+      setStreamText("");
+      try {
+        const answer = await postCaseChat({ ...job, onChunk: setStreamText });
+        delete outboxRef.current[id];
+        patchMessage(id, { delivery: null });
+        setMessages((prev) => [...prev, { id: `local-assistant-${Date.now()}`, role: "assistant", content: answer, attachments: [] }]);
+        setStreamText("");
+        await refreshCaseAfterChat(job.caseId);
+        setSending(false);
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (!err.retryable) break;
+        if (attempt < maxAttempts) await sleep(1500 * attempt);
+      }
+    }
+    setStreamText("");
+    patchMessage(id, {
+      delivery: { state: "failed", error: lastErr.message, canRetry: !!lastErr.retryable, canReport: !!job.manualTried },
+    });
+    if (lastErr.status === 402) openCase(job.caseId);
+    setSending(false);
+  };
+
   const sendMessage = async () => {
     if ((!input.trim() && pendingFiles.length === 0) || sending) return;
-    setSending(true);
     const text = input.trim();
-    const localFiles = pendingFiles;
+    const id = `local-${Date.now()}`;
+    outboxRef.current[id] = { caseId: selected.id, text, files: pendingFiles, clientMsgId: newClientMsgId(), manualTried: false };
     setInput("");
     setPendingFiles([]);
-    setMessages((prev) => [
-      ...prev,
-      { id: `local-${Date.now()}`, role: "user", content: text || "(archivos adjuntos)", attachments: [] },
-    ]);
-    setStreamText("");
+    setMessages((prev) => [...prev, { id, role: "user", content: text || "(archivos adjuntos)", attachments: [] }]);
+    await deliver(id, 4);
+  };
+
+  const retryMessage = (m) => {
+    if (sending || !outboxRef.current[m.id]) return;
+    outboxRef.current[m.id].manualTried = true;
+    deliver(m.id, 1);
+  };
+
+  const reportFailure = async (m) => {
+    const job = outboxRef.current[m.id];
     try {
-      const fd = new FormData();
-      fd.append("text", text);
-      localFiles.forEach((f) => fd.append("files", f));
-      const res = await fetch(`${BACKEND_URL}/api/cases/${selected.id}/chat`, {
-        method: "POST",
-        credentials: "include",
-        body: fd,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(formatApiErrorDetail(err.detail) || "Error al enviar el mensaje");
-      }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let acc = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setStreamText(acc);
-      }
-      if (acc.includes("[ERROR]")) toast.error("La respuesta terminó con errores");
-      if (acc.trim()) {
-        setMessages((prev) => [
-          ...prev,
-          { id: `local-assistant-${Date.now()}`, role: "assistant", content: acc, attachments: [] },
-        ]);
-      }
-      setStreamText("");
-      await refreshCaseAfterChat(selected.id);
+      const { data } = await api.post(`/cases/${job.caseId}/report-failure`, { message: job.text, error: m.delivery?.error || "" });
+      patchMessage(m.id, { delivery: { ...m.delivery, reported: true } });
+      toast.success(data.message);
     } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setStreamText("");
-      setSending(false);
+      toast.error(formatApiErrorDetail(err.response?.data?.detail));
     }
   };
 
@@ -554,14 +575,14 @@ export const AdminConsulting = ({ openCaseId }) => {
       ) : (
         <div className="bg-[#F8FAFC] border border-slate-200 h-[72vh] flex flex-col">
           {/* Header del caso */}
-          <div className="bg-white border-b border-slate-200 px-5 py-3.5 flex items-center justify-between gap-3">
+          <div className="bg-white border-b border-slate-200 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="font-heading font-bold text-[#0F172A] text-sm truncate" data-testid="case-title">
                 {selected.title}
               </p>
               {selected.description && <p className="text-xs text-slate-400 truncate">{selected.description}</p>}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2">
               <Select value={selected.status} onValueChange={setStatus}>
                 <SelectTrigger className="h-8 text-xs w-[120px]" data-testid="case-status-select">
                   <SelectValue />
@@ -596,6 +617,20 @@ export const AdminConsulting = ({ openCaseId }) => {
               >
                 {generatingReport ? <Loader2 className="animate-spin" size={13} /> : <FileBadge size={13} />}
                 {generatingReport ? "Generando…" : "Informe final"}
+              </button>
+              <button
+                onClick={() => setCalcOpen(true)}
+                data-testid="calculators-btn"
+                className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] text-slate-500 font-semibold px-3 py-1.5 rounded-full text-xs transition-colors"
+              >
+                <Calculator size={13} /> Calculadoras
+              </button>
+              <button
+                onClick={() => setTimelineOpen(true)}
+                data-testid="timeline-btn"
+                className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-[#0284C7] hover:text-[#0284C7] text-slate-500 font-semibold px-3 py-1.5 rounded-full text-xs transition-colors"
+              >
+                <CalendarClock size={13} /> Plazos
               </button>
               <button
                 onClick={openLibrary}
@@ -659,7 +694,7 @@ export const AdminConsulting = ({ openCaseId }) => {
               </div>
             )}
             {messages.map((m) => (
-              <Message key={m.id} m={m} caseId={selected.id} onExport={exportPdf} exporting={exporting} />
+              <Message key={m.id} m={m} caseId={selected.id} onExport={exportPdf} exporting={exporting} onRetry={retryMessage} onReport={reportFailure} />
             ))}
             {streamText && (
               <Message m={{ role: "assistant", content: streamText, attachments: [] }} caseId={selected.id} onExport={() => {}} exporting={null} />
@@ -898,6 +933,13 @@ export const AdminConsulting = ({ openCaseId }) => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {selected && (
+        <>
+          <CaseCalculators caseId={selected.id} open={calcOpen} onOpenChange={setCalcOpen} onDone={() => { openCase(selected.id); loadCases(); }} />
+          <CaseTimeline caseId={selected.id} open={timelineOpen} onOpenChange={setTimelineOpen} />
+        </>
+      )}
 
       {selected && !isAdmin && (
         <PaymentDialog
