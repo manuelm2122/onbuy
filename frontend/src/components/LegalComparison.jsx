@@ -6,7 +6,7 @@ const ROWS = [
   ["Documentos", "Cartas notariales, denuncias y demandas listas en PDF, con biblioteca por caso e informe final", "Texto para copiar, pegar y dar formato por tu cuenta"],
   ["Cálculos", "Calculadoras exactas por fórmula: beneficios sociales, intereses legales, alimentos devengados y alquileres, mes a mes", "Aritmética hecha por la IA, que puede equivocarse"],
   ["Plazos", "Línea de tiempo del caso con recordatorios por correo antes de cada vencimiento", "No te avisa de nada"],
-  ["Citas legales", "Botón \"Verificar citas\": comprueba cada norma en fuentes oficiales y marca las dudosas", "Puede citar artículos que no existen sin advertirlo"],
+  ["Citas legales", "Botón \"Verificar citas\": busca cada norma citada en fuentes públicas, te muestra el enlace y marca las dudosas", "Puede citar artículos que no existen sin advertirlo"],
   ["Respaldo", "Empresa peruana con RUC, Libro de Reclamaciones y protección de datos bajo la ley peruana", "Sin atención local ni responsable en el Perú"],
 ];
 

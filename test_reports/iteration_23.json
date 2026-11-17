@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 23 — case tools (calculators, timeline events, verify-citations, idempotent chat, delivery retries, reminders). 21/22 backend tests PASS (1 skipped). Frontend critical flows verified: /asesoria-legal comparativa (7 rows, mobile ok), admin Consultoría panel (calculators-btn, timeline-btn, calculator renders S/ 4,500.00 with export-pdf and without verify-citations button), timeline add/toggle/delete, and the CRITICAL delivery-failure retry flow end-to-end (4 auto attempts @ ~9.2s, retry banner, delivery-failed with retry-only initially, manual retry adds report button, report click disables button with 'Falla reportada', unroute+retry recovers without duplicating user message after reload).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration23_case_tools.py",
+    "/app/test_reports/pytest/iter23.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "calculators.py: the ValueError in _date() uses a bare `raise ValueError` inside an except — PEP 'raise X from None' would avoid chained exception noise in logs, but functionally fine.",
+    "case_tools.py `_valid_date`: works, but Pydantic regex r'^\\d{4}-\\d{2}-\\d{2}$' accepts e.g. '2025-13-45' which is only caught at _valid_date; acceptable (still returns 400).",
+    "consulting.py case_chat: when the stream errors partway, assistant content with partial=True is saved and the user turn's quota is NOT refunded (only refunded if answer is empty). Replay rule only replays non-partial; partial replies are deleted + refunded on same client_msg_id retry — behavior is coherent.",
+    "AdminConsulting deliver(): maxAttempts=4 but retry banner displays `d.attempt`/`d.max` where max = maxAttempts-1 = 3, so user sees up to '3/3'. Matches spec.",
+    "case_tools.send_due_reminders: correctly rolls back `reminded` entry if send_email returns != 'sent', so a next tick retries. OK for preview (Resend disabled)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration23_case_tools.py"],
+  "success_rate": {"backend": "95% (21/22 pass, 1 skipped — trial already consumed on cliente.prueba)", "frontend": "100% (all critical flows verified)"},
+  "test_credentials": "Admin: admin@onbuysolutions.com / OnBuy2026!; Cliente: cliente.prueba@ejemplo.com / Cliente2026!",
+  "seed_data_creation": "Created and cleaned up: TEST_iter23 cases (admin + cliente), case_events, case_messages, and 1 Falla-en-chat contact. All removed at end of test run.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pre-existing admin case 'TEST iter23 desalojo' with a verified citations message is still present; useful for verify-citations UI probes (to retest UI, unset `citations` in Mongo on the assistant message). The idempotent chat test used ~1 real AI call; delivery UI test needed no AI calls (all intercepted). Non-retryable 400 'Formato no soportado' path was verified by code review only (not an E2E route.fulfill test) because canRetry gate in DeliveryStatus is trivially correct."
+}

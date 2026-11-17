@@ -57,7 +57,7 @@ export const CitationCheck = ({ caseId, message }) => {
 
   if (!result)
     return (
-      <button onClick={verify} disabled={loading} data-testid={`verify-citations-btn-${message.id}`} title="Comprueba en fuentes oficiales las normas citadas. No descuenta mensajes." className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-emerald-600 hover:text-emerald-700 disabled:opacity-60 text-slate-500 font-semibold px-3 py-1.5 rounded-full text-[11px] transition-colors">
+      <button onClick={verify} disabled={loading} data-testid={`verify-citations-btn-${message.id}`} title="Busca en fuentes públicas las normas citadas. No descuenta mensajes." className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-emerald-600 hover:text-emerald-700 disabled:opacity-60 text-slate-500 font-semibold px-3 py-1.5 rounded-full text-[11px] transition-colors">
         {loading ? <Loader2 className="animate-spin" size={11} /> : <ShieldCheck size={11} />}
         {loading ? "Verificando citas…" : "Verificar citas"}
       </button>
