@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowRight, CheckCircle2, FolderKanban, FileSignature, ScanSearch, Scale, Calculator, Globe,
+  ShieldCheck, CalendarClock, ListChecks, BookOpenText, Wallet, FileStack, Smartphone,
   Home as HomeIcon, ShieldAlert, Baby, Briefcase, Banknote, Users, FileWarning, Landmark,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -12,6 +13,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { ContactSection } from "@/components/ContactSection";
 import { LegalComparison } from "@/components/LegalComparison";
+import { LEGAL_BENEFITS } from "@/constants/legalBenefits";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -23,8 +25,14 @@ const FEATURES = [
   { icon: FileSignature, title: "Generación de documentos", desc: "Cartas notariales, denuncias, demandas, contratos y requerimientos redactados a tu medida y descargables en PDF con un clic." },
   { icon: ScanSearch, title: "Procesamiento de documentos", desc: "Sube contratos, resoluciones, vouchers, fotos, audios o videos. El sistema los lee, los resume y los integra a tu expediente." },
   { icon: Scale, title: "Enfoque civil y penal", desc: "Análisis de tu situación desde ambas vías, con referencias a la normativa peruana aplicable para que sepas qué camino tomar." },
-  { icon: Calculator, title: "Respaldo contable", desc: "Liquidaciones de deuda, cálculo de intereses, pensiones devengadas y orientación tributaria ante SUNAT." },
-  { icon: Globe, title: "Información actualizada", desc: "Búsqueda en fuentes públicas en tiempo real para trabajar con normas y criterios vigentes." },
+  { icon: Calculator, title: "Calculadoras exactas", desc: "Beneficios sociales, intereses legales, pensiones devengadas y alquileres impagos calculados por fórmula, con detalle mes a mes." },
+  { icon: ShieldCheck, title: "Citas legales verificadas", desc: "Un botón busca en fuentes públicas cada norma que cita el agente, te muestra el enlace y marca las dudosas. No gasta mensajes." },
+  { icon: CalendarClock, title: "Plazos con recordatorios", desc: "Línea de tiempo de tu caso con etapas y fechas límite. Te avisamos por correo 3 días antes, 1 día antes y el mismo día." },
+  { icon: ListChecks, title: "Checklist de requisitos", desc: "Qué documentos reunir para tu desalojo, demanda de alimentos, reclamo ante Indecopi, cobro de deuda o reclamo laboral." },
+  { icon: BookOpenText, title: "Cuaderno de hechos", desc: "Anota lo ocurrido con su fecha y su prueba. Se ordena solo y se convierte en la relación de hechos de tu escrito." },
+  { icon: Wallet, title: "Pagos y deudas", desc: "Registra lo que te deben y cada pago con su comprobante. El saldo se actualiza solo y se exporta como estado de cuenta." },
+  { icon: FileStack, title: "Expediente listo para presentar", desc: "Un solo PDF con carátula, índice, tu escrito y los anexos numerados y foliados, en el orden que elijas." },
+  { icon: Smartphone, title: "Tu caso siempre contigo", desc: "Instala la app en tu celular, descarga tu caso completo en un ZIP y recibe un informe final al cerrarlo." },
 ];
 
 const CASES = [
@@ -100,9 +108,9 @@ export default function LegalService() {
           <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight max-w-2xl">
             Mucho más que una consulta: un sistema completo para tu caso
           </h2>
-          <div className="mt-16 grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="mt-16 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map((f, i) => (
-              <motion.div key={f.title} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} custom={i % 3} className="bg-white border border-slate-200 p-8 lg:p-10 hover:border-[#0284C7] transition-colors" data-testid={`legal-feature-${i}`}>
+              <motion.div key={f.title} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} custom={i % 4} className="bg-white border border-slate-200 p-7 hover:border-[#0284C7] transition-colors" data-testid={`legal-feature-${i}`}>
                 <f.icon className="text-[#0284C7]" size={30} strokeWidth={1.5} />
                 <h3 className="font-heading font-bold text-lg mt-6">{f.title}</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mt-3">{f.desc}</p>
@@ -166,6 +174,32 @@ export default function LegalService() {
       </section>
 
       <LegalComparison />
+
+      <section id="beneficios" className="bg-[#020617] py-24 lg:py-32 scroll-mt-16" data-testid="legal-benefits">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <p className="text-xs tracking-[0.3em] uppercase text-[#0EA5E9] font-semibold mb-4">Incluido en tu pago</p>
+          <h2 className="font-heading font-black text-2xl sm:text-3xl lg:text-4xl tracking-tight text-white max-w-3xl">
+            Todo lo que recibes al habilitar tu chat por {priceLabel}
+          </h2>
+          <p className="mt-5 text-slate-400 text-sm md:text-base leading-relaxed max-w-2xl">
+            {cfg.chat_messages} mensajes con el agente y todas las herramientas del expediente, que puedes usar las veces que quieras sin gastar mensajes.
+          </p>
+          <div className="mt-14 grid md:grid-cols-3 gap-px bg-slate-800 border border-slate-800">
+            {LEGAL_BENEFITS.map((g, i) => (
+              <div key={g.group} className="bg-[#020617] p-8" data-testid={`legal-benefit-group-${i}`}>
+                <h3 className="font-heading font-bold text-white text-lg">{g.group}</h3>
+                <ul className="mt-6 space-y-3.5">
+                  {g.items.map((item) => (
+                    <li key={item} className="flex items-start gap-3 text-sm text-slate-300 leading-relaxed">
+                      <CheckCircle2 size={16} className="text-[#0EA5E9] shrink-0 mt-0.5" /> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <section className="bg-[#0284C7] py-20" data-testid="legal-pricing">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">

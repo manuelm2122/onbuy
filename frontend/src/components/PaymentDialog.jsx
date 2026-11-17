@@ -101,7 +101,7 @@ const CasePaymentDialog = ({ item, open, onOpenChange, onPaid }) => {
                 <p className="text-sm font-semibold text-[#0F172A]" data-testid="payment-messages">
                   {extra ? `${offer.messages} mensajes adicionales` : `Chat con ${offer.messages} mensajes`}
                 </p>
-                <p className="text-xs text-slate-600 mt-1">Incluye análisis de documentos, redacción de escritos e informe final en PDF.</p>
+                <p className="text-xs text-slate-600 mt-1">Incluye análisis de documentos, redacción de escritos e informe final en PDF, más las herramientas del expediente sin gastar mensajes: calculadoras, plazos con recordatorios, verificación de citas, checklist, cuaderno de hechos, pagos y deudas, expediente foliado y descarga en ZIP.</p>
                 <p className="mt-2 font-heading font-black text-xl text-[#0284C7]" data-testid="payment-total-usd">
                   US$ {offer.amount_usd.toFixed(2)}
                   <span className="text-xs font-normal text-slate-500 ml-2">≈ S/ {offer.amount_pen.toFixed(2)} (T.C. {offer.rate_pen_per_usd.toFixed(3)})</span>

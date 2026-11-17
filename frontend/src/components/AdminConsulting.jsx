@@ -17,6 +17,7 @@ import {
   X,
   CreditCard,
   Lock,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -39,6 +40,7 @@ import { PaymentDialog } from "@/components/PaymentDialog";
 import { postCaseChat, newClientMsgId, sleep } from "@/lib/caseChat";
 import { DeliveryStatus, CitationCheck } from "@/components/CaseMessageExtras";
 import { CaseTools } from "@/components/CaseTools";
+import { LEGAL_BENEFITS_SHORT } from "@/constants/legalBenefits";
 
 const STATUS_META = {
   activo: { label: "Activo", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -566,6 +568,16 @@ export const AdminConsulting = ({ openCaseId }) => {
             contador peruano: analiza documentos, imágenes, audios y videos, busca normativa en la web y
             redacta documentos listos para exportar a PDF.
           </p>
+          {!isAdmin && (
+            <ul className="mt-6 text-left space-y-2 max-w-md" data-testid="panel-benefits">
+              <li className="text-[11px] tracking-[0.15em] uppercase text-[#0284C7] font-semibold">Incluido al habilitar tu chat</li>
+              {LEGAL_BENEFITS_SHORT.map((b) => (
+                <li key={b} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                  <CheckCircle2 size={13} className="text-[#0284C7] shrink-0 mt-0.5" /> {b}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       ) : (
         <div className="bg-[#F8FAFC] border border-slate-200 h-[72vh] flex flex-col min-w-0">

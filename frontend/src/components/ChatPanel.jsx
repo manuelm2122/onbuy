@@ -6,7 +6,7 @@ import { ChevronDown, RotateCcw, SendHorizontal, Sparkles } from "lucide-react";
 
 const SUGGESTIONS = [
   "¿Qué servicios ofrecen?",
-  "¿Cuánto cuesta la asesoría legal?",
+  "¿Qué incluye la asesoría legal de pago?",
   "Quiero un menú QR para mi restaurante",
   "¿Cómo contrato una auditoría?",
 ];
