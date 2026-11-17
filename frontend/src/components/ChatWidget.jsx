@@ -70,13 +70,13 @@ export const ChatWidget = () => {
             whileTap={{ scale: 0.95 }}
             aria-label="Abrir chat"
             data-testid="chat-launcher-btn"
-            className="relative h-14 pl-4 pr-5 rounded-full bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold text-sm flex items-center gap-2.5 shadow-xl shadow-sky-900/50 ring-1 ring-white/20 transition-colors"
+            className="relative h-14 w-14 sm:w-auto justify-center sm:pl-4 sm:pr-5 rounded-full bg-[#0284C7] hover:bg-[#0EA5E9] text-white font-semibold text-sm flex items-center gap-2.5 shadow-xl shadow-sky-900/50 ring-1 ring-white/20 transition-colors"
           >
             <span className="absolute inset-0 rounded-full bg-[#0EA5E9] opacity-40 animate-ping [animation-duration:2.4s] pointer-events-none" />
             <span className="relative w-8 h-8 rounded-full bg-white/15 flex items-center justify-center">
               <MessagesSquare size={18} />
             </span>
-            <span className="relative">Chatea con nosotros</span>
+            <span className="relative hidden sm:inline">Chatea con nosotros</span>
           </motion.button>
         </div>
       )}
